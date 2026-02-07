@@ -288,7 +288,7 @@ export const useGame = create<GameState>()(
         finalPipes = [...finalPipes, ...newPipes];
       }
 
-      finalPipes = finalPipes.filter((p) => p.z < newZ + 30 && p.z > newZ - 160);
+      finalPipes = finalPipes.filter((p) => !p.passed && p.z > newZ - 160);
 
       set({
         birdY: newY,
