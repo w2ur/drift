@@ -91,16 +91,17 @@ const POWERUP_COLLECT_RADIUS = 1.2;
 const POWERUP_TYPES: PowerUpType[] = ["shield", "slowmo", "shrink"];
 
 function getDifficulty(score: number) {
-  const t = Math.min(score / 40, 1);
+  const t = Math.min(score / 80, 1);
+  const eased = t * t;
 
-  const gapSize = GAP_SIZE - (GAP_SIZE - MIN_GAP_SIZE) * t;
-  const pipeSpacing = PIPE_SPACING - (PIPE_SPACING - MIN_PIPE_SPACING) * t;
+  const gapSize = GAP_SIZE - (GAP_SIZE - MIN_GAP_SIZE) * eased;
+  const pipeSpacing = PIPE_SPACING - (PIPE_SPACING - MIN_PIPE_SPACING) * eased;
 
-  const moveChance = Math.min(score / 20, 0.7);
-  const moveSpeed = MAX_MOVE_SPEED * t;
-  const moveRange = MAX_MOVE_RANGE * t;
+  const moveChance = Math.min(score / 50, 0.7);
+  const moveSpeed = MAX_MOVE_SPEED * eased;
+  const moveRange = MAX_MOVE_RANGE * eased;
 
-  const speed = BASE_BIRD_SPEED + (MAX_BIRD_SPEED - BASE_BIRD_SPEED) * t;
+  const speed = BASE_BIRD_SPEED + (MAX_BIRD_SPEED - BASE_BIRD_SPEED) * eased;
 
   return { gapSize, pipeSpacing, moveChance, moveSpeed, moveRange, speed };
 }
