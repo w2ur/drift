@@ -55,6 +55,13 @@ function ShadowLight() {
   );
 }
 
+const CAMERA_PRESETS = {
+  "close-left":  { behindDist: 6,  sideOffset: -3, height: 1.8, lookAheadZ: -10, lookY: 0.2 },
+  "close-right": { behindDist: 6,  sideOffset: 3,  height: 1.8, lookAheadZ: -10, lookY: 0.2 },
+  "far-left":    { behindDist: 12, sideOffset: -5, height: 3.5, lookAheadZ: -14, lookY: -0.5 },
+  "far-right":   { behindDist: 12, sideOffset: 5,  height: 3.5, lookAheadZ: -14, lookY: -0.5 },
+};
+
 function CameraController() {
   const { camera } = useThree();
   const smoothPos = useRef(new THREE.Vector3(0, 6, 8));
@@ -62,23 +69,22 @@ function CameraController() {
 
   useFrame(() => {
     const state = useGame.getState();
+    const preset = CAMERA_PRESETS[state.cameraAngle];
 
-    const behindDist = 6;
-    const sideOffset = 3;
-    const behindZ = state.birdZ + behindDist;
+    const behindZ = state.birdZ + preset.behindDist;
     const behindX = getPathX(behindZ);
 
     const targetPos = new THREE.Vector3(
-      behindX * 0.5 + state.birdX * 0.5 + sideOffset,
-      state.birdY + 1.8,
+      behindX * 0.5 + state.birdX * 0.5 + preset.sideOffset,
+      state.birdY + preset.height,
       behindZ
     );
 
-    const lookAheadZ = state.birdZ - 10;
+    const lookAheadZ = state.birdZ + preset.lookAheadZ;
     const lookAheadX = getPathX(lookAheadZ);
     const targetLook = new THREE.Vector3(
       lookAheadX * 0.7 + state.birdX * 0.3,
-      state.birdY + 0.2,
+      state.birdY + preset.lookY,
       lookAheadZ
     );
 

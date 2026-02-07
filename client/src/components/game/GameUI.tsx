@@ -1,4 +1,4 @@
-import { useGame } from "@/lib/stores/useGame";
+import { useGame, CameraAngle } from "@/lib/stores/useGame";
 import { useAudio } from "@/lib/stores/useAudio";
 import { useEffect, useRef } from "react";
 
@@ -230,6 +230,62 @@ function SoundToggle() {
   );
 }
 
+const CAMERA_OPTIONS: { value: CameraAngle; label: string }[] = [
+  { value: "close-left", label: "Close Left" },
+  { value: "close-right", label: "Close Right" },
+  { value: "far-left", label: "Far Left" },
+  { value: "far-right", label: "Far Right" },
+];
+
+function CameraSelector() {
+  const cameraAngle = useGame((s) => s.cameraAngle);
+  const setCameraAngle = useGame((s) => s.setCameraAngle);
+  const phase = useGame((s) => s.phase);
+
+  if (phase === "dying") return null;
+
+  return (
+    <div style={{
+      position: "absolute",
+      bottom: "15px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 20,
+      display: "flex",
+      gap: "6px",
+      pointerEvents: "auto",
+    }}>
+      {CAMERA_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={(e) => {
+            e.stopPropagation();
+            setCameraAngle(opt.value);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{
+            background: cameraAngle === opt.value
+              ? "rgba(255, 215, 0, 0.9)"
+              : "rgba(0, 0, 0, 0.5)",
+            color: cameraAngle === opt.value ? "#333" : "#fff",
+            border: "none",
+            borderRadius: "8px",
+            padding: "8px 14px",
+            fontSize: "13px",
+            fontWeight: cameraAngle === opt.value ? "bold" : "normal",
+            fontFamily: "'Inter', sans-serif",
+            cursor: "pointer",
+            transition: "all 0.15s",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function GameUI() {
   return (
     <>
@@ -237,6 +293,7 @@ export function GameUI() {
       <StartScreen />
       <GameOverScreen />
       <SoundToggle />
+      <CameraSelector />
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }

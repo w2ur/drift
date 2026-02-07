@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
 export type GamePhase = "ready" | "playing" | "dying" | "ended";
+export type CameraAngle = "close-left" | "close-right" | "far-left" | "far-right";
 
 interface Pipe {
   id: number;
@@ -30,6 +31,7 @@ interface GameState {
   deathReason: string;
   dyingTimer: number;
   gameTime: number;
+  cameraAngle: CameraAngle;
 
   start: () => void;
   restart: () => void;
@@ -38,6 +40,7 @@ interface GameState {
   updateBird: (delta: number) => void;
   updateDying: (delta: number) => void;
   getPathX: (z: number) => number;
+  setCameraAngle: (angle: CameraAngle) => void;
 }
 
 const GRAVITY = -16;
@@ -140,6 +143,7 @@ export const useGame = create<GameState>()(
     deathReason: "",
     dyingTimer: 0,
     gameTime: 0,
+    cameraAngle: "close-left" as CameraAngle,
 
     getPathX,
 
@@ -224,6 +228,10 @@ export const useGame = create<GameState>()(
       } else {
         set({ birdY: newY, birdVelocity: newVelocity, dyingTimer: newTimer });
       }
+    },
+
+    setCameraAngle: (angle: CameraAngle) => {
+      set({ cameraAngle: angle });
     },
 
     updateBird: (delta: number) => {
