@@ -30,6 +30,31 @@ function GameLogic() {
   return null;
 }
 
+function ShadowLight() {
+  const lightRef = useRef<THREE.DirectionalLight>(null);
+
+  useFrame(() => {
+    if (!lightRef.current) return;
+    const state = useGame.getState();
+    lightRef.current.position.set(state.birdX + 8, state.birdY + 15, state.birdZ - 5);
+    lightRef.current.target.position.set(state.birdX, state.birdY, state.birdZ);
+    lightRef.current.target.updateMatrixWorld();
+  });
+
+  return (
+    <directionalLight
+      ref={lightRef}
+      position={[8, 20, 0]}
+      intensity={1.2}
+      castShadow
+      shadow-mapSize={[2048, 2048]}
+      shadow-bias={-0.001}
+    >
+      <orthographicCamera attach="shadow-camera" args={[-15, 15, 15, -15, 0.5, 40]} />
+    </directionalLight>
+  );
+}
+
 function CameraController() {
   const { camera } = useThree();
   const smoothPos = useRef(new THREE.Vector3(0, 6, 8));
@@ -114,12 +139,7 @@ export function GameScene() {
   return (
     <>
       <ambientLight intensity={0.6} />
-      <directionalLight
-        position={[10, 20, 5]}
-        intensity={1.2}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
-      />
+      <ShadowLight />
       <directionalLight position={[-5, 10, -10]} intensity={0.3} />
 
       <GameLogic />
