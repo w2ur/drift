@@ -7,6 +7,27 @@ import { Bird } from "./Bird";
 import { Pipes } from "./Pipes";
 import { Ground, Sky, Clouds } from "./Ground";
 
+function GameLogic() {
+  const prevPhase = useRef<string>("ready");
+
+  useFrame((_, delta) => {
+    const state = useGame.getState();
+
+    if (state.phase === "playing") {
+      state.updateBird(delta);
+    }
+
+    if (prevPhase.current === "playing" && state.phase === "ended") {
+      const { playHit } = useAudio.getState();
+      playHit();
+    }
+
+    prevPhase.current = state.phase;
+  });
+
+  return null;
+}
+
 function CameraController() {
   const { camera } = useThree();
   const smoothPos = useRef(new THREE.Vector3(0, 6, 8));
@@ -33,32 +54,11 @@ function CameraController() {
       lookAheadZ
     );
 
-    smoothPos.current.lerp(targetPos, 0.1);
-    smoothLook.current.lerp(targetLook, 0.1);
+    smoothPos.current.lerp(targetPos, 0.12);
+    smoothLook.current.lerp(targetLook, 0.12);
 
     camera.position.copy(smoothPos.current);
     camera.lookAt(smoothLook.current);
-  });
-
-  return null;
-}
-
-function GameLogic() {
-  const prevPhase = useRef<string>("ready");
-
-  useFrame((_, delta) => {
-    const state = useGame.getState();
-
-    if (state.phase === "playing") {
-      state.updateBird(delta);
-    }
-
-    if (prevPhase.current === "playing" && state.phase === "ended") {
-      const { playHit } = useAudio.getState();
-      playHit();
-    }
-
-    prevPhase.current = state.phase;
   });
 
   return null;
@@ -119,6 +119,9 @@ export function GameScene() {
       />
       <directionalLight position={[-5, 10, -10]} intensity={0.3} />
 
+      <GameLogic />
+      <InputHandler />
+
       <Sky />
       <Clouds />
       <Ground />
@@ -126,8 +129,6 @@ export function GameScene() {
       <Pipes />
 
       <CameraController />
-      <GameLogic />
-      <InputHandler />
 
       <fog attach="fog" args={["#87CEEB", 80, 180]} />
     </>

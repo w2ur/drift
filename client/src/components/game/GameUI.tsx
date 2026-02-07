@@ -153,11 +153,13 @@ function GameOverScreen() {
         </div>
         {deathReason && (
           <div style={{
-            fontSize: "14px",
-            color: "#FF8888",
-            margin: "0 0 20px 0",
+            fontSize: "18px",
+            color: "#FF9999",
+            margin: "5px 0 25px 0",
             fontFamily: "'Inter', sans-serif",
-            fontStyle: "italic",
+            padding: "8px 16px",
+            background: "rgba(255,0,0,0.15)",
+            borderRadius: "8px",
           }}>
             {deathReason}
           </div>
