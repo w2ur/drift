@@ -10,6 +10,10 @@ interface Pipe {
   gapY: number;
   passed: boolean;
   hit: boolean;
+  moveSpeed: number;
+  moveRange: number;
+  moveOffset: number;
+  baseGapY: number;
 }
 
 interface GameState {
@@ -24,6 +28,7 @@ interface GameState {
   nextPipeId: number;
   deathReason: string;
   dyingTimer: number;
+  gameTime: number;
 
   start: () => void;
   restart: () => void;
@@ -49,6 +54,24 @@ const BIRD_VISUAL_RADIUS = 0.4;
 
 const DYING_DURATION = 1.0;
 
+const MIN_GAP_SIZE = 3.6;
+const MIN_PIPE_SPACING = 12;
+const MAX_MOVE_SPEED = 2.5;
+const MAX_MOVE_RANGE = 1.8;
+
+function getDifficulty(score: number) {
+  const t = Math.min(score / 40, 1);
+
+  const gapSize = GAP_SIZE - (GAP_SIZE - MIN_GAP_SIZE) * t;
+  const pipeSpacing = PIPE_SPACING - (PIPE_SPACING - MIN_PIPE_SPACING) * t;
+
+  const moveChance = Math.min(score / 20, 0.7);
+  const moveSpeed = MAX_MOVE_SPEED * t;
+  const moveRange = MAX_MOVE_RANGE * t;
+
+  return { gapSize, pipeSpacing, moveChance, moveSpeed, moveRange };
+}
+
 function getPathX(z: number): number {
   return 8 * Math.sin(z * 0.025) + 4 * Math.sin(z * 0.06 + 1.5);
 }
@@ -56,7 +79,8 @@ function getPathX(z: number): number {
 function checkPipeCollision(
   birdY: number,
   birdZ: number,
-  pipe: Pipe
+  pipe: Pipe,
+  currentGapSize: number
 ): { hit: boolean; side: string } {
   const dz = Math.abs(birdZ - pipe.z);
 
@@ -64,7 +88,7 @@ function checkPipeCollision(
     return { hit: false, side: "" };
   }
 
-  const halfGap = GAP_SIZE / 2;
+  const halfGap = currentGapSize / 2;
 
   const bottomPipeTop = pipe.gapY - halfGap;
   const topPipeBottom = pipe.gapY + halfGap;
@@ -82,6 +106,24 @@ function checkPipeCollision(
   return { hit: false, side: "" };
 }
 
+function createPipe(id: number, z: number, score: number): Pipe {
+  const diff = getDifficulty(score);
+  const baseGapY = 2.5 + Math.random() * 4;
+  const isMoving = Math.random() < diff.moveChance;
+  return {
+    id,
+    z,
+    x: getPathX(z),
+    gapY: baseGapY,
+    baseGapY,
+    passed: false,
+    hit: false,
+    moveSpeed: isMoving ? 0.8 + Math.random() * diff.moveSpeed : 0,
+    moveRange: isMoving ? 0.5 + Math.random() * diff.moveRange : 0,
+    moveOffset: Math.random() * Math.PI * 2,
+  };
+}
+
 export const useGame = create<GameState>()(
   subscribeWithSelector((set, get) => ({
     phase: "ready",
@@ -95,6 +137,7 @@ export const useGame = create<GameState>()(
     nextPipeId: 0,
     deathReason: "",
     dyingTimer: 0,
+    gameTime: 0,
 
     getPathX,
 
@@ -105,14 +148,7 @@ export const useGame = create<GameState>()(
           let id = 0;
           for (let i = 0; i < 8; i++) {
             const pz = INITIAL_PIPE_Z - i * PIPE_SPACING;
-            pipes.push({
-              id: id++,
-              z: pz,
-              x: getPathX(pz),
-              gapY: 3 + Math.random() * 3.5,
-              passed: false,
-              hit: false,
-            });
+            pipes.push(createPipe(id++, pz, 0));
           }
           return {
             phase: "playing",
@@ -123,6 +159,7 @@ export const useGame = create<GameState>()(
             birdZ: 0,
             pipes,
             nextPipeId: id,
+            gameTime: 0,
           };
         }
         return {};
@@ -140,6 +177,7 @@ export const useGame = create<GameState>()(
         pipes: [],
         nextPipeId: 0,
         dyingTimer: 0,
+        gameTime: 0,
       }));
     },
 
@@ -195,6 +233,7 @@ export const useGame = create<GameState>()(
       const newY = state.birdY + newVelocity * clampedDelta;
       const newZ = state.birdZ - BIRD_SPEED * clampedDelta;
       const newX = getPathX(newZ);
+      const newGameTime = state.gameTime + clampedDelta;
 
       if (newY < BIRD_VISUAL_RADIUS) {
         get().end("Hit the ground");
@@ -205,8 +244,19 @@ export const useGame = create<GameState>()(
         return;
       }
 
-      for (const pipe of state.pipes) {
-        const result = checkPipeCollision(newY, newZ, pipe);
+      const diff = getDifficulty(state.score);
+
+      const movingPipes = state.pipes.map((pipe) => {
+        if (pipe.moveSpeed > 0) {
+          const newGapY = pipe.baseGapY + Math.sin(newGameTime * pipe.moveSpeed + pipe.moveOffset) * pipe.moveRange;
+          const clampedGapY = Math.max(diff.gapSize / 2 + 0.5, Math.min(newGapY, 12 - diff.gapSize / 2 - 0.5));
+          return { ...pipe, gapY: clampedGapY };
+        }
+        return pipe;
+      });
+
+      for (const pipe of movingPipes) {
+        const result = checkPipeCollision(newY, newZ, pipe, diff.gapSize);
         if (result.hit) {
           get().end(`Hit ${result.side} pipe`, pipe.id);
           return;
@@ -214,7 +264,7 @@ export const useGame = create<GameState>()(
       }
 
       let scoreIncrement = 0;
-      const updatedPipes = state.pipes.map((pipe) => {
+      const updatedPipes = movingPipes.map((pipe) => {
         if (!pipe.passed && newZ < pipe.z - PIPE_CAP_RADIUS - BIRD_VISUAL_RADIUS) {
           scoreIncrement++;
           return { ...pipe, passed: true };
@@ -229,17 +279,11 @@ export const useGame = create<GameState>()(
       let nextId = state.nextPipeId;
 
       if (newZ - furthestZ < 100) {
+        const newDiff = getDifficulty(newScore);
         const newPipes = [];
         for (let i = 0; i < 4; i++) {
-          const pz = furthestZ - PIPE_SPACING * (i + 1);
-          newPipes.push({
-            id: nextId++,
-            z: pz,
-            x: getPathX(pz),
-            gapY: 3 + Math.random() * 3.5,
-            passed: false,
-            hit: false,
-          });
+          const pz = furthestZ - newDiff.pipeSpacing * (i + 1);
+          newPipes.push(createPipe(nextId++, pz, newScore));
         }
         finalPipes = [...finalPipes, ...newPipes];
       }
@@ -254,6 +298,7 @@ export const useGame = create<GameState>()(
         pipes: finalPipes,
         score: newScore,
         nextPipeId: nextId,
+        gameTime: newGameTime,
       });
     },
 

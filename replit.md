@@ -4,6 +4,8 @@
 A 3D version of Flappy Bird where the player flies forward through a winding 3D world. The path curves left and right using sine waves, and the player controls only the bird's altitude via flapping. Built with React Three Fiber.
 
 ## Recent Changes
+- 2026-02-07: Progressive difficulty - gap shrinks (5→3.6), pipe spacing decreases (18→12), moving pipes introduced as score increases
+- 2026-02-07: Real shadow casting - bird casts shadows on ground and pipes via Three.js shadow system
 - 2026-02-07: Full collision refactor - uses bird visual radius (0.4) vs pipe visual gap edges, added "dying" phase with death animation, hit pipe turns red, camera slows on death
 - 2026-02-07: Added winding/turning path, fixed collision detection, tuned difficulty
 - 2026-02-07: Initial implementation of 3D Flappy Bird game

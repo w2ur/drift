@@ -1,12 +1,20 @@
 import { useMemo } from "react";
 import * as THREE from "three";
-import { useGame, GAP_SIZE, PIPE_RADIUS, PIPE_CAP_RADIUS, PIPE_CAP_HEIGHT } from "@/lib/stores/useGame";
+import { useGame, PIPE_RADIUS, PIPE_CAP_RADIUS, PIPE_CAP_HEIGHT } from "@/lib/stores/useGame";
 
 const PIPE_SEGMENTS = 12;
 const PIPE_MAX_HEIGHT = 15;
 
-function PipePair({ x, z, gapY, hit }: { x: number; z: number; gapY: number; hit: boolean }) {
-  const halfGap = GAP_SIZE / 2;
+const MIN_GAP_SIZE = 3.6;
+const BASE_GAP_SIZE = 5.0;
+
+function getGapForScore(score: number) {
+  const t = Math.min(score / 40, 1);
+  return BASE_GAP_SIZE - (BASE_GAP_SIZE - MIN_GAP_SIZE) * t;
+}
+
+function PipePair({ x, z, gapY, hit, gapSize }: { x: number; z: number; gapY: number; hit: boolean; gapSize: number }) {
+  const halfGap = gapSize / 2;
 
   const bottomHeight = gapY - halfGap;
   const topStart = gapY + halfGap;
@@ -58,11 +66,13 @@ function PipePair({ x, z, gapY, hit }: { x: number; z: number; gapY: number; hit
 
 export function Pipes() {
   const pipes = useGame((s) => s.pipes);
+  const score = useGame((s) => s.score);
+  const gapSize = getGapForScore(score);
 
   return (
     <>
       {pipes.map((pipe) => (
-        <PipePair key={pipe.id} x={pipe.x} z={pipe.z} gapY={pipe.gapY} hit={pipe.hit} />
+        <PipePair key={pipe.id} x={pipe.x} z={pipe.z} gapY={pipe.gapY} hit={pipe.hit} gapSize={gapSize} />
       ))}
     </>
   );
