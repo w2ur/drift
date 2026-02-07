@@ -1,12 +1,11 @@
 import { useMemo } from "react";
 import * as THREE from "three";
-import { useGame, GAP_SIZE } from "@/lib/stores/useGame";
+import { useGame, GAP_SIZE, PIPE_RADIUS } from "@/lib/stores/useGame";
 
-const PIPE_RADIUS = 1.0;
 const PIPE_SEGMENTS = 12;
 const PIPE_MAX_HEIGHT = 15;
 
-function PipePair({ z, gapY }: { z: number; gapY: number }) {
+function PipePair({ x, z, gapY }: { x: number; z: number; gapY: number }) {
   const halfGap = GAP_SIZE / 2;
 
   const bottomHeight = gapY - halfGap;
@@ -17,7 +16,7 @@ function PipePair({ z, gapY }: { z: number; gapY: number }) {
   const pipeCapColor = useMemo(() => new THREE.Color("#27AE36"), []);
 
   return (
-    <group position={[0, 0, z]}>
+    <group position={[x, 0, z]}>
       {bottomHeight > 0 && (
         <group>
           <mesh position={[0, bottomHeight / 2, 0]}>
@@ -53,7 +52,7 @@ export function Pipes() {
   return (
     <>
       {pipes.map((pipe) => (
-        <PipePair key={pipe.id} z={pipe.z} gapY={pipe.gapY} />
+        <PipePair key={pipe.id} x={pipe.x} z={pipe.z} gapY={pipe.gapY} />
       ))}
     </>
   );

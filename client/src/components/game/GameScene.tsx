@@ -1,7 +1,7 @@
-import { useRef, useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { useGame } from "@/lib/stores/useGame";
+import { useGame, getPathX } from "@/lib/stores/useGame";
 import { useAudio } from "@/lib/stores/useAudio";
 import { Bird } from "./Bird";
 import { Pipes } from "./Pipes";
@@ -9,18 +9,29 @@ import { Ground, Sky, Clouds } from "./Ground";
 
 function CameraController() {
   const { camera } = useThree();
+  const smoothX = useRef(0);
+  const smoothY = useRef(5);
+  const smoothZ = useRef(8);
 
   useFrame(() => {
     const state = useGame.getState();
-    const targetX = 0;
-    const targetY = state.birdY + 2;
-    const targetZ = state.birdZ + 8;
 
-    camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetX, 0.1);
-    camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.08);
-    camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.1);
+    const lookAheadZ = state.birdZ - 5;
+    const lookAheadX = getPathX(lookAheadZ);
+    const avgX = (state.birdX + lookAheadX) * 0.5;
 
-    camera.lookAt(0, state.birdY, state.birdZ - 10);
+    const targetX = avgX;
+    const targetY = state.birdY + 2.5;
+    const targetZ = state.birdZ + 10;
+
+    smoothX.current = THREE.MathUtils.lerp(smoothX.current, targetX, 0.06);
+    smoothY.current = THREE.MathUtils.lerp(smoothY.current, targetY, 0.06);
+    smoothZ.current = THREE.MathUtils.lerp(smoothZ.current, targetZ, 0.08);
+
+    camera.position.set(smoothX.current, smoothY.current, smoothZ.current);
+
+    const lookTarget = new THREE.Vector3(state.birdX, state.birdY, state.birdZ - 15);
+    camera.lookAt(lookTarget);
   });
 
   return null;
@@ -39,9 +50,6 @@ function GameLogic() {
     if (prevPhase.current === "playing" && state.phase === "ended") {
       const { playHit } = useAudio.getState();
       playHit();
-    }
-
-    if (prevPhase.current !== "playing" && state.phase === "playing") {
     }
 
     prevPhase.current = state.phase;
@@ -75,23 +83,18 @@ function InputHandler() {
       }
     };
 
-    const onTouchStart = (e: TouchEvent) => {
-      e.preventDefault();
-      handleFlap();
-    };
-
-    const onClick = () => {
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "BUTTON") return;
       handleFlap();
     };
 
     window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("touchstart", onTouchStart, { passive: false });
-    window.addEventListener("click", onClick);
+    window.addEventListener("pointerdown", onPointerDown);
 
     return () => {
       window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("touchstart", onTouchStart);
-      window.removeEventListener("click", onClick);
+      window.removeEventListener("pointerdown", onPointerDown);
     };
   }, [handleFlap]);
 
@@ -120,7 +123,7 @@ export function GameScene() {
       <GameLogic />
       <InputHandler />
 
-      <fog attach="fog" args={["#87CEEB", 60, 150]} />
+      <fog attach="fog" args={["#87CEEB", 80, 180]} />
     </>
   );
 }

@@ -11,31 +11,37 @@ export function Ground() {
   useMemo(() => {
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(50, 50);
+    texture.repeat.set(80, 80);
   }, [texture]);
 
   useFrame(() => {
     if (!meshRef.current) return;
     const state = useGame.getState();
-    meshRef.current.position.z = state.birdZ;
+    meshRef.current.position.set(state.birdX, 0, state.birdZ);
   });
 
   return (
     <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-      <planeGeometry args={[200, 400]} />
+      <planeGeometry args={[400, 400]} />
       <meshStandardMaterial map={texture} color="#4CAF50" />
     </mesh>
   );
 }
 
 export function Sky() {
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  useFrame(() => {
+    if (!meshRef.current) return;
+    const state = useGame.getState();
+    meshRef.current.position.set(state.birdX, 50, state.birdZ);
+  });
+
   return (
-    <>
-      <mesh position={[0, 50, 0]}>
-        <sphereGeometry args={[200, 32, 32]} />
-        <meshBasicMaterial color="#87CEEB" side={THREE.BackSide} />
-      </mesh>
-    </>
+    <mesh ref={meshRef} position={[0, 50, 0]}>
+      <sphereGeometry args={[250, 32, 32]} />
+      <meshBasicMaterial color="#87CEEB" side={THREE.BackSide} />
+    </mesh>
   );
 }
 
@@ -68,10 +74,10 @@ export function Clouds() {
 
   const cloudData = useMemo(() => {
     const data: [number, number, number][] = [];
-    for (let i = 0; i < 30; i++) {
-      const x = (Math.random() - 0.5) * 80;
-      const y = 12 + Math.random() * 15;
-      const z = -i * 30 - Math.random() * 20;
+    for (let i = 0; i < 40; i++) {
+      const x = (Math.random() - 0.5) * 100;
+      const y = 14 + Math.random() * 15;
+      const z = -i * 25 - Math.random() * 20;
       data.push([x, y, z]);
     }
     return data;
@@ -80,7 +86,7 @@ export function Clouds() {
   useFrame(() => {
     if (!groupRef.current) return;
     const state = useGame.getState();
-    groupRef.current.position.z = -state.birdZ * 0.3;
+    groupRef.current.position.set(0, 0, -state.birdZ * 0.7 + state.birdZ);
   });
 
   return (

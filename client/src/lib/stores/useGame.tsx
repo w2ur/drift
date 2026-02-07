@@ -6,6 +6,7 @@ export type GamePhase = "ready" | "playing" | "ended";
 interface Pipe {
   id: number;
   z: number;
+  x: number;
   gapY: number;
   passed: boolean;
 }
@@ -15,6 +16,7 @@ interface GameState {
   score: number;
   bestScore: number;
   birdY: number;
+  birdX: number;
   birdVelocity: number;
   birdZ: number;
   pipes: Pipe[];
@@ -25,17 +27,23 @@ interface GameState {
   end: () => void;
   flap: () => void;
   updateBird: (delta: number) => void;
+  getPathX: (z: number) => number;
 }
 
-const GRAVITY = -15;
+const GRAVITY = -16;
 const FLAP_FORCE = 7;
-const PIPE_SPACING = 20;
-const BIRD_SPEED = 12;
-const GAP_SIZE = 5.5;
+const PIPE_SPACING = 18;
+const BIRD_SPEED = 13;
+const GAP_SIZE = 5.0;
 const PIPE_HEIGHT = 12;
 const INITIAL_PIPE_Z = -40;
-const BIRD_RADIUS = 0.3;
+const BIRD_RADIUS = 0.35;
 const PIPE_COLLISION_DEPTH = 1.0;
+const PIPE_RADIUS = 1.0;
+
+function getPathX(z: number): number {
+  return 8 * Math.sin(z * 0.025) + 4 * Math.sin(z * 0.06 + 1.5);
+}
 
 export const useGame = create<GameState>()(
   subscribeWithSelector((set, get) => ({
@@ -43,10 +51,13 @@ export const useGame = create<GameState>()(
     score: 0,
     bestScore: parseInt(localStorage.getItem("flappy3d_best") || "0"),
     birdY: 3,
+    birdX: 0,
     birdVelocity: 0,
     birdZ: 0,
     pipes: [],
     nextPipeId: 0,
+
+    getPathX,
 
     start: () => {
       set((state) => {
@@ -54,9 +65,11 @@ export const useGame = create<GameState>()(
           const pipes: Pipe[] = [];
           let id = 0;
           for (let i = 0; i < 8; i++) {
+            const pz = INITIAL_PIPE_Z - i * PIPE_SPACING;
             pipes.push({
               id: id++,
-              z: INITIAL_PIPE_Z - i * PIPE_SPACING,
+              z: pz,
+              x: getPathX(pz),
               gapY: 3 + Math.random() * 3.5,
               passed: false,
             });
@@ -64,7 +77,8 @@ export const useGame = create<GameState>()(
           return {
             phase: "playing",
             score: 0,
-            birdY: 3,
+            birdY: 4,
+            birdX: getPathX(0),
             birdVelocity: 2,
             birdZ: 0,
             pipes,
@@ -79,7 +93,8 @@ export const useGame = create<GameState>()(
       set(() => ({
         phase: "ready",
         score: 0,
-        birdY: 3,
+        birdY: 4,
+        birdX: 0,
         birdVelocity: 0,
         birdZ: 0,
         pipes: [],
@@ -113,6 +128,7 @@ export const useGame = create<GameState>()(
       const newVelocity = state.birdVelocity + GRAVITY * clampedDelta;
       const newY = state.birdY + newVelocity * clampedDelta;
       const newZ = state.birdZ - BIRD_SPEED * clampedDelta;
+      const newX = getPathX(newZ);
 
       if (newY < 0.5 || newY > 10) {
         get().end();
@@ -120,8 +136,11 @@ export const useGame = create<GameState>()(
       }
 
       for (const pipe of state.pipes) {
-        const dz = Math.abs(newZ - pipe.z);
-        if (dz < PIPE_COLLISION_DEPTH) {
+        const dx = newX - pipe.x;
+        const dz = newZ - pipe.z;
+        const distXZ = Math.sqrt(dx * dx + dz * dz);
+
+        if (distXZ < PIPE_RADIUS + BIRD_RADIUS) {
           const halfGap = GAP_SIZE / 2;
           if (newY < pipe.gapY - halfGap + BIRD_RADIUS || newY > pipe.gapY + halfGap - BIRD_RADIUS) {
             get().end();
@@ -132,7 +151,7 @@ export const useGame = create<GameState>()(
 
       let scoreIncrement = 0;
       const updatedPipes = state.pipes.map((pipe) => {
-        if (!pipe.passed && newZ < pipe.z - 1.5) {
+        if (!pipe.passed && newZ < pipe.z - PIPE_RADIUS - BIRD_RADIUS) {
           scoreIncrement++;
           return { ...pipe, passed: true };
         }
@@ -145,12 +164,14 @@ export const useGame = create<GameState>()(
       let finalPipes = updatedPipes;
       let nextId = state.nextPipeId;
 
-      if (newZ - furthestZ < 80) {
+      if (newZ - furthestZ < 100) {
         const newPipes = [];
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 4; i++) {
+          const pz = furthestZ - PIPE_SPACING * (i + 1);
           newPipes.push({
             id: nextId++,
-            z: furthestZ - PIPE_SPACING * (i + 1),
+            z: pz,
+            x: getPathX(pz),
             gapY: 3 + Math.random() * 3.5,
             passed: false,
           });
@@ -158,10 +179,11 @@ export const useGame = create<GameState>()(
         finalPipes = [...finalPipes, ...newPipes];
       }
 
-      finalPipes = finalPipes.filter((p) => p.z < newZ + 30 && p.z > newZ - 150);
+      finalPipes = finalPipes.filter((p) => p.z < newZ + 30 && p.z > newZ - 160);
 
       set({
         birdY: newY,
+        birdX: newX,
         birdVelocity: newVelocity,
         birdZ: newZ,
         pipes: finalPipes,
@@ -173,4 +195,4 @@ export const useGame = create<GameState>()(
   }))
 );
 
-export { GRAVITY, FLAP_FORCE, PIPE_SPACING, BIRD_SPEED, GAP_SIZE, PIPE_HEIGHT, INITIAL_PIPE_Z, BIRD_RADIUS, PIPE_COLLISION_DEPTH };
+export { GRAVITY, FLAP_FORCE, PIPE_SPACING, BIRD_SPEED, GAP_SIZE, PIPE_HEIGHT, INITIAL_PIPE_Z, BIRD_RADIUS, PIPE_COLLISION_DEPTH, PIPE_RADIUS, getPathX };
