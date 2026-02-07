@@ -14,6 +14,7 @@ interface Pipe {
   moveRange: number;
   moveOffset: number;
   baseGapY: number;
+  passedTime: number;
 }
 
 interface GameState {
@@ -121,6 +122,7 @@ function createPipe(id: number, z: number, score: number): Pipe {
     moveSpeed: isMoving ? 0.8 + Math.random() * diff.moveSpeed : 0,
     moveRange: isMoving ? 0.5 + Math.random() * diff.moveRange : 0,
     moveOffset: Math.random() * Math.PI * 2,
+    passedTime: 0,
   };
 }
 
@@ -263,11 +265,16 @@ export const useGame = create<GameState>()(
         }
       }
 
+      const PIPE_EXIT_DURATION = 0.5;
+
       let scoreIncrement = 0;
       const updatedPipes = movingPipes.map((pipe) => {
         if (!pipe.passed && newZ < pipe.z - PIPE_CAP_RADIUS - BIRD_VISUAL_RADIUS) {
           scoreIncrement++;
-          return { ...pipe, passed: true };
+          return { ...pipe, passed: true, passedTime: 0 };
+        }
+        if (pipe.passed) {
+          return { ...pipe, passedTime: pipe.passedTime + clampedDelta };
         }
         return pipe;
       });
@@ -288,7 +295,7 @@ export const useGame = create<GameState>()(
         finalPipes = [...finalPipes, ...newPipes];
       }
 
-      finalPipes = finalPipes.filter((p) => !p.passed && p.z > newZ - 160);
+      finalPipes = finalPipes.filter((p) => p.z > newZ - 160 && (!p.passed || p.passedTime < PIPE_EXIT_DURATION));
 
       set({
         birdY: newY,
