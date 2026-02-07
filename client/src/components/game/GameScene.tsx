@@ -15,9 +15,11 @@ function GameLogic() {
 
     if (state.phase === "playing") {
       state.updateBird(delta);
+    } else if (state.phase === "dying") {
+      state.updateDying(delta);
     }
 
-    if (prevPhase.current === "playing" && state.phase === "ended") {
+    if (prevPhase.current === "playing" && (state.phase === "dying" || state.phase === "ended")) {
       const { playHit } = useAudio.getState();
       playHit();
     }
@@ -54,8 +56,9 @@ function CameraController() {
       lookAheadZ
     );
 
-    smoothPos.current.lerp(targetPos, 0.12);
-    smoothLook.current.lerp(targetLook, 0.12);
+    const lerpSpeed = state.phase === "dying" ? 0.03 : 0.12;
+    smoothPos.current.lerp(targetPos, lerpSpeed);
+    smoothLook.current.lerp(targetLook, lerpSpeed);
 
     camera.position.copy(smoothPos.current);
     camera.lookAt(smoothLook.current);

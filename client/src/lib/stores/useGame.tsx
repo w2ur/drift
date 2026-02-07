@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
-export type GamePhase = "ready" | "playing" | "ended";
+export type GamePhase = "ready" | "playing" | "dying" | "ended";
 
 interface Pipe {
   id: number;
@@ -9,6 +9,7 @@ interface Pipe {
   x: number;
   gapY: number;
   passed: boolean;
+  hit: boolean;
 }
 
 interface GameState {
@@ -22,12 +23,14 @@ interface GameState {
   pipes: Pipe[];
   nextPipeId: number;
   deathReason: string;
+  dyingTimer: number;
 
   start: () => void;
   restart: () => void;
-  end: (reason?: string) => void;
+  end: (reason?: string, pipeId?: number) => void;
   flap: () => void;
   updateBird: (delta: number) => void;
+  updateDying: (delta: number) => void;
   getPathX: (z: number) => number;
 }
 
@@ -38,13 +41,45 @@ const BIRD_SPEED = 13;
 const GAP_SIZE = 5.0;
 const PIPE_HEIGHT = 12;
 const INITIAL_PIPE_Z = -40;
-const BIRD_RADIUS = 0.2;
 const PIPE_RADIUS = 1.0;
 const PIPE_CAP_RADIUS = PIPE_RADIUS * 1.2;
 const PIPE_CAP_HEIGHT = 0.3;
 
+const BIRD_VISUAL_RADIUS = 0.4;
+
+const DYING_DURATION = 1.0;
+
 function getPathX(z: number): number {
   return 8 * Math.sin(z * 0.025) + 4 * Math.sin(z * 0.06 + 1.5);
+}
+
+function checkPipeCollision(
+  birdY: number,
+  birdZ: number,
+  pipe: Pipe
+): { hit: boolean; side: string } {
+  const dz = Math.abs(birdZ - pipe.z);
+
+  if (dz > PIPE_RADIUS + BIRD_VISUAL_RADIUS) {
+    return { hit: false, side: "" };
+  }
+
+  const halfGap = GAP_SIZE / 2;
+
+  const bottomPipeTop = pipe.gapY - halfGap;
+  const topPipeBottom = pipe.gapY + halfGap;
+
+  const birdBottom = birdY - BIRD_VISUAL_RADIUS;
+  const birdTop = birdY + BIRD_VISUAL_RADIUS;
+
+  if (birdBottom < bottomPipeTop) {
+    return { hit: true, side: "bottom" };
+  }
+  if (birdTop > topPipeBottom) {
+    return { hit: true, side: "top" };
+  }
+
+  return { hit: false, side: "" };
 }
 
 export const useGame = create<GameState>()(
@@ -59,6 +94,7 @@ export const useGame = create<GameState>()(
     pipes: [],
     nextPipeId: 0,
     deathReason: "",
+    dyingTimer: 0,
 
     getPathX,
 
@@ -75,6 +111,7 @@ export const useGame = create<GameState>()(
               x: getPathX(pz),
               gapY: 3 + Math.random() * 3.5,
               passed: false,
+              hit: false,
             });
           }
           return {
@@ -102,15 +139,26 @@ export const useGame = create<GameState>()(
         birdZ: 0,
         pipes: [],
         nextPipeId: 0,
+        dyingTimer: 0,
       }));
     },
 
-    end: (reason?: string) => {
+    end: (reason?: string, hitPipeId?: number) => {
       set((state) => {
         if (state.phase === "playing") {
           const best = Math.max(state.score, state.bestScore);
           localStorage.setItem("flappy3d_best", best.toString());
-          return { phase: "ended", bestScore: best, deathReason: reason || "" };
+          const updatedPipes = hitPipeId !== undefined
+            ? state.pipes.map(p => p.id === hitPipeId ? { ...p, hit: true } : p)
+            : state.pipes;
+          return {
+            phase: "dying",
+            bestScore: best,
+            deathReason: reason || "",
+            dyingTimer: 0,
+            birdVelocity: 3,
+            pipes: updatedPipes,
+          };
         }
         return {};
       });
@@ -120,6 +168,21 @@ export const useGame = create<GameState>()(
       const { phase } = get();
       if (phase === "playing") {
         set({ birdVelocity: FLAP_FORCE });
+      }
+    },
+
+    updateDying: (delta: number) => {
+      const state = get();
+      if (state.phase !== "dying") return;
+
+      const newTimer = state.dyingTimer + delta;
+      const newVelocity = state.birdVelocity + GRAVITY * delta;
+      const newY = Math.max(0, state.birdY + newVelocity * delta);
+
+      if (newTimer >= DYING_DURATION || newY <= 0) {
+        set({ phase: "ended", birdY: newY, birdVelocity: newVelocity, dyingTimer: newTimer });
+      } else {
+        set({ birdY: newY, birdVelocity: newVelocity, dyingTimer: newTimer });
       }
     },
 
@@ -133,7 +196,7 @@ export const useGame = create<GameState>()(
       const newZ = state.birdZ - BIRD_SPEED * clampedDelta;
       const newX = getPathX(newZ);
 
-      if (newY < 0.4) {
+      if (newY < BIRD_VISUAL_RADIUS) {
         get().end("Hit the ground");
         return;
       }
@@ -142,28 +205,17 @@ export const useGame = create<GameState>()(
         return;
       }
 
-      const BIRD_VISUAL_RADIUS = 0.4;
       for (const pipe of state.pipes) {
-        const dz = Math.abs(newZ - pipe.z);
-
-        if (dz < PIPE_RADIUS - BIRD_VISUAL_RADIUS * 0.5) {
-          const halfGap = GAP_SIZE / 2;
-          const capTop = pipe.gapY - halfGap + PIPE_CAP_HEIGHT;
-          const capBottom = pipe.gapY + halfGap - PIPE_CAP_HEIGHT;
-          const gapBottom = capTop + BIRD_VISUAL_RADIUS;
-          const gapTop = capBottom - BIRD_VISUAL_RADIUS;
-
-          if (newY < gapBottom || newY > gapTop) {
-            const side = newY < gapBottom ? "bottom" : "top";
-            get().end(`Hit ${side} pipe`);
-            return;
-          }
+        const result = checkPipeCollision(newY, newZ, pipe);
+        if (result.hit) {
+          get().end(`Hit ${result.side} pipe`, pipe.id);
+          return;
         }
       }
 
       let scoreIncrement = 0;
       const updatedPipes = state.pipes.map((pipe) => {
-        if (!pipe.passed && newZ < pipe.z - PIPE_CAP_RADIUS - BIRD_RADIUS) {
+        if (!pipe.passed && newZ < pipe.z - PIPE_CAP_RADIUS - BIRD_VISUAL_RADIUS) {
           scoreIncrement++;
           return { ...pipe, passed: true };
         }
@@ -186,6 +238,7 @@ export const useGame = create<GameState>()(
             x: getPathX(pz),
             gapY: 3 + Math.random() * 3.5,
             passed: false,
+            hit: false,
           });
         }
         finalPipes = [...finalPipes, ...newPipes];
@@ -207,4 +260,4 @@ export const useGame = create<GameState>()(
   }))
 );
 
-export { GRAVITY, FLAP_FORCE, PIPE_SPACING, BIRD_SPEED, GAP_SIZE, PIPE_HEIGHT, INITIAL_PIPE_Z, BIRD_RADIUS, PIPE_RADIUS, PIPE_CAP_RADIUS, PIPE_CAP_HEIGHT, getPathX };
+export { GRAVITY, FLAP_FORCE, PIPE_SPACING, BIRD_SPEED, GAP_SIZE, PIPE_HEIGHT, INITIAL_PIPE_Z, PIPE_RADIUS, PIPE_CAP_RADIUS, PIPE_CAP_HEIGHT, BIRD_VISUAL_RADIUS, getPathX };

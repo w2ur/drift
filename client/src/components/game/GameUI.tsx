@@ -15,7 +15,7 @@ function ScoreDisplay() {
     prevScore.current = score;
   }, [score, phase]);
 
-  if (phase !== "playing") return null;
+  if (phase !== "playing" && phase !== "dying") return null;
 
   return (
     <div style={{
@@ -146,18 +146,18 @@ function GameOverScreen() {
         <div style={{
           fontSize: "20px",
           color: "#AAAAAA",
-          margin: "0 0 10px 0",
+          margin: "0 0 20px 0",
           fontFamily: "'Inter', sans-serif",
         }}>
           Best: <span style={{ color: "#FFD700" }}>{bestScore}</span>
         </div>
         {deathReason && (
           <div style={{
-            fontSize: "18px",
+            fontSize: "16px",
             color: "#FF9999",
-            margin: "5px 0 25px 0",
+            margin: "0 0 20px 0",
             fontFamily: "'Inter', sans-serif",
-            padding: "8px 16px",
+            padding: "6px 14px",
             background: "rgba(255,0,0,0.15)",
             borderRadius: "8px",
           }}>

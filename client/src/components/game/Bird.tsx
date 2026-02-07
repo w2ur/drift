@@ -7,7 +7,6 @@ export function Bird() {
   const groupRef = useRef<THREE.Group>(null);
   const modelRef = useRef<THREE.Group>(null);
   const wingRef = useRef<THREE.Group>(null);
-  const phase = useGame((s) => s.phase);
   const wingTime = useRef(0);
 
   const bodyColor = useMemo(() => new THREE.Color("#FFD700"), []);
@@ -45,15 +44,33 @@ export function Bird() {
       modelRef.current.rotation.z = THREE.MathUtils.lerp(
         modelRef.current.rotation.z, bankAngle, 0.1
       );
+
+      wingTime.current += delta * 15;
+      if (wingRef.current) {
+        wingRef.current.rotation.z = Math.sin(wingTime.current) * 0.5;
+      }
+    } else if (state.phase === "dying") {
+      const pitchAngle = THREE.MathUtils.clamp(-state.birdVelocity * 0.08, -1.2, 0.4);
+      modelRef.current.rotation.x = THREE.MathUtils.lerp(
+        modelRef.current.rotation.x, pitchAngle, 0.2
+      );
+
+      modelRef.current.rotation.z = THREE.MathUtils.lerp(
+        modelRef.current.rotation.z, 0.5, 0.05
+      );
+
+      if (wingRef.current) {
+        wingRef.current.rotation.z = -0.8;
+      }
     } else {
       modelRef.current.rotation.x = 0;
       modelRef.current.rotation.z = 0;
       groupRef.current.rotation.y = 0;
-    }
 
-    wingTime.current += delta * 15;
-    if (wingRef.current) {
-      wingRef.current.rotation.z = Math.sin(wingTime.current) * 0.5;
+      wingTime.current += delta * 8;
+      if (wingRef.current) {
+        wingRef.current.rotation.z = Math.sin(wingTime.current) * 0.3;
+      }
     }
   });
 
