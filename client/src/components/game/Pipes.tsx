@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import * as THREE from "three";
-import { useGame, GAP_SIZE, PIPE_RADIUS } from "@/lib/stores/useGame";
+import { useGame, GAP_SIZE, PIPE_RADIUS, PIPE_CAP_RADIUS, PIPE_CAP_HEIGHT } from "@/lib/stores/useGame";
 
 const PIPE_SEGMENTS = 12;
 const PIPE_MAX_HEIGHT = 15;
@@ -23,8 +23,8 @@ function PipePair({ x, z, gapY }: { x: number; z: number; gapY: number }) {
             <cylinderGeometry args={[PIPE_RADIUS, PIPE_RADIUS, bottomHeight, PIPE_SEGMENTS]} />
             <meshStandardMaterial color={pipeColor} />
           </mesh>
-          <mesh position={[0, bottomHeight, 0]}>
-            <cylinderGeometry args={[PIPE_RADIUS * 1.2, PIPE_RADIUS * 1.2, 0.4, PIPE_SEGMENTS]} />
+          <mesh position={[0, bottomHeight + PIPE_CAP_HEIGHT / 2, 0]}>
+            <cylinderGeometry args={[PIPE_CAP_RADIUS, PIPE_CAP_RADIUS, PIPE_CAP_HEIGHT, PIPE_SEGMENTS]} />
             <meshStandardMaterial color={pipeCapColor} />
           </mesh>
         </group>
@@ -36,8 +36,8 @@ function PipePair({ x, z, gapY }: { x: number; z: number; gapY: number }) {
             <cylinderGeometry args={[PIPE_RADIUS, PIPE_RADIUS, topHeight, PIPE_SEGMENTS]} />
             <meshStandardMaterial color={pipeColor} />
           </mesh>
-          <mesh position={[0, topStart, 0]}>
-            <cylinderGeometry args={[PIPE_RADIUS * 1.2, PIPE_RADIUS * 1.2, 0.4, PIPE_SEGMENTS]} />
+          <mesh position={[0, topStart - PIPE_CAP_HEIGHT / 2, 0]}>
+            <cylinderGeometry args={[PIPE_CAP_RADIUS, PIPE_CAP_RADIUS, PIPE_CAP_HEIGHT, PIPE_SEGMENTS]} />
             <meshStandardMaterial color={pipeCapColor} />
           </mesh>
         </group>

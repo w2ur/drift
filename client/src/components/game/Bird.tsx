@@ -5,10 +5,10 @@ import { useGame, getPathX } from "@/lib/stores/useGame";
 
 export function Bird() {
   const groupRef = useRef<THREE.Group>(null);
+  const modelRef = useRef<THREE.Group>(null);
   const wingRef = useRef<THREE.Group>(null);
   const phase = useGame((s) => s.phase);
   const wingTime = useRef(0);
-  const prevX = useRef(0);
 
   const bodyColor = useMemo(() => new THREE.Color("#FFD700"), []);
   const beakColor = useMemo(() => new THREE.Color("#FF6B00"), []);
@@ -18,26 +18,37 @@ export function Bird() {
   const bellyColor = useMemo(() => new THREE.Color("#FFF8DC"), []);
 
   useFrame((_, delta) => {
-    if (!groupRef.current) return;
+    if (!groupRef.current || !modelRef.current) return;
     const state = useGame.getState();
 
     groupRef.current.position.set(state.birdX, state.birdY, state.birdZ);
 
-    const tiltAngle = THREE.MathUtils.clamp(state.birdVelocity * 0.06, -0.6, 0.5);
-    groupRef.current.rotation.x = -tiltAngle;
-
     if (state.phase === "playing") {
-      const pathDx = state.birdX - prevX.current;
-      const turnAngle = THREE.MathUtils.clamp(-pathDx * 2, -0.4, 0.4);
-      groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, turnAngle, 0.1);
-
-      const lookAheadZ = state.birdZ - 2;
+      const lookDist = 3;
+      const lookAheadZ = state.birdZ - lookDist;
       const lookAheadX = getPathX(lookAheadZ);
-      const dirX = lookAheadX - state.birdX;
-      const yawAngle = Math.atan2(dirX, -2);
-      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, yawAngle, 0.08);
+      const dx = lookAheadX - state.birdX;
+      const dz = lookAheadZ - state.birdZ;
 
-      prevX.current = state.birdX;
+      const yawAngle = Math.atan2(-dx, -dz);
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(
+        groupRef.current.rotation.y, yawAngle, 0.12
+      );
+
+      const pitchAngle = THREE.MathUtils.clamp(-state.birdVelocity * 0.05, -0.5, 0.4);
+      modelRef.current.rotation.x = THREE.MathUtils.lerp(
+        modelRef.current.rotation.x, pitchAngle, 0.15
+      );
+
+      const pathSlope = (getPathX(state.birdZ - 0.5) - getPathX(state.birdZ + 0.5));
+      const bankAngle = THREE.MathUtils.clamp(pathSlope * 0.15, -0.3, 0.3);
+      modelRef.current.rotation.z = THREE.MathUtils.lerp(
+        modelRef.current.rotation.z, bankAngle, 0.1
+      );
+    } else {
+      modelRef.current.rotation.x = 0;
+      modelRef.current.rotation.z = 0;
+      groupRef.current.rotation.y = 0;
     }
 
     wingTime.current += delta * 15;
@@ -46,23 +57,8 @@ export function Bird() {
     }
   });
 
-  if (phase === "ready") {
-    return (
-      <group ref={groupRef} position={[0, 4, 0]}>
-        <mesh>
-          <sphereGeometry args={[0.4, 16, 16]} />
-          <meshStandardMaterial color={bodyColor} />
-        </mesh>
-        <mesh position={[0, -0.1, -0.35]}>
-          <coneGeometry args={[0.12, 0.25, 8]} />
-          <meshStandardMaterial color={beakColor} />
-        </mesh>
-      </group>
-    );
-  }
-
-  return (
-    <group ref={groupRef} position={[0, 4, 0]}>
+  const birdModel = (
+    <group ref={modelRef}>
       <mesh>
         <sphereGeometry args={[0.4, 16, 16]} />
         <meshStandardMaterial color={bodyColor} />
@@ -111,6 +107,12 @@ export function Bird() {
         <boxGeometry args={[0.2, 0.15, 0.12]} />
         <meshStandardMaterial color={wingColor} />
       </mesh>
+    </group>
+  );
+
+  return (
+    <group ref={groupRef} position={[0, 4, 0]}>
+      {birdModel}
     </group>
   );
 }

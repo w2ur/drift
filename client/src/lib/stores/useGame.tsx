@@ -38,8 +38,9 @@ const GAP_SIZE = 5.0;
 const PIPE_HEIGHT = 12;
 const INITIAL_PIPE_Z = -40;
 const BIRD_RADIUS = 0.35;
-const PIPE_COLLISION_DEPTH = 1.0;
 const PIPE_RADIUS = 1.0;
+const PIPE_CAP_RADIUS = PIPE_RADIUS * 1.2;
+const PIPE_CAP_HEIGHT = 0.3;
 
 function getPathX(z: number): number {
   return 8 * Math.sin(z * 0.025) + 4 * Math.sin(z * 0.06 + 1.5);
@@ -50,7 +51,7 @@ export const useGame = create<GameState>()(
     phase: "ready",
     score: 0,
     bestScore: parseInt(localStorage.getItem("flappy3d_best") || "0"),
-    birdY: 3,
+    birdY: 4,
     birdX: 0,
     birdVelocity: 0,
     birdZ: 0,
@@ -140,9 +141,13 @@ export const useGame = create<GameState>()(
         const dz = newZ - pipe.z;
         const distXZ = Math.sqrt(dx * dx + dz * dz);
 
-        if (distXZ < PIPE_RADIUS + BIRD_RADIUS) {
+        if (distXZ < PIPE_CAP_RADIUS + BIRD_RADIUS) {
           const halfGap = GAP_SIZE / 2;
-          if (newY < pipe.gapY - halfGap + BIRD_RADIUS || newY > pipe.gapY + halfGap - BIRD_RADIUS) {
+          const capIntrusion = PIPE_CAP_HEIGHT / 2;
+          const gapBottom = pipe.gapY - halfGap + capIntrusion + BIRD_RADIUS;
+          const gapTop = pipe.gapY + halfGap - capIntrusion - BIRD_RADIUS;
+
+          if (newY < gapBottom || newY > gapTop) {
             get().end();
             return;
           }
@@ -151,7 +156,7 @@ export const useGame = create<GameState>()(
 
       let scoreIncrement = 0;
       const updatedPipes = state.pipes.map((pipe) => {
-        if (!pipe.passed && newZ < pipe.z - PIPE_RADIUS - BIRD_RADIUS) {
+        if (!pipe.passed && newZ < pipe.z - PIPE_CAP_RADIUS - BIRD_RADIUS) {
           scoreIncrement++;
           return { ...pipe, passed: true };
         }
@@ -195,4 +200,4 @@ export const useGame = create<GameState>()(
   }))
 );
 
-export { GRAVITY, FLAP_FORCE, PIPE_SPACING, BIRD_SPEED, GAP_SIZE, PIPE_HEIGHT, INITIAL_PIPE_Z, BIRD_RADIUS, PIPE_COLLISION_DEPTH, PIPE_RADIUS, getPathX };
+export { GRAVITY, FLAP_FORCE, PIPE_SPACING, BIRD_SPEED, GAP_SIZE, PIPE_HEIGHT, INITIAL_PIPE_Z, BIRD_RADIUS, PIPE_RADIUS, PIPE_CAP_RADIUS, PIPE_CAP_HEIGHT, getPathX };

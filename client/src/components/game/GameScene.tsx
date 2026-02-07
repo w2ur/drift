@@ -9,29 +9,35 @@ import { Ground, Sky, Clouds } from "./Ground";
 
 function CameraController() {
   const { camera } = useThree();
-  const smoothX = useRef(0);
-  const smoothY = useRef(5);
-  const smoothZ = useRef(8);
+  const smoothPos = useRef(new THREE.Vector3(0, 6, 8));
+  const smoothLook = useRef(new THREE.Vector3(0, 4, -10));
 
   useFrame(() => {
     const state = useGame.getState();
 
-    const lookAheadZ = state.birdZ - 5;
+    const behindDist = 10;
+    const behindZ = state.birdZ + behindDist;
+    const behindX = getPathX(behindZ);
+
+    const targetPos = new THREE.Vector3(
+      behindX * 0.5 + state.birdX * 0.5,
+      state.birdY + 3,
+      behindZ
+    );
+
+    const lookAheadZ = state.birdZ - 12;
     const lookAheadX = getPathX(lookAheadZ);
-    const avgX = (state.birdX + lookAheadX) * 0.5;
+    const targetLook = new THREE.Vector3(
+      lookAheadX * 0.7 + state.birdX * 0.3,
+      state.birdY - 0.5,
+      lookAheadZ
+    );
 
-    const targetX = avgX;
-    const targetY = state.birdY + 2.5;
-    const targetZ = state.birdZ + 10;
+    smoothPos.current.lerp(targetPos, 0.1);
+    smoothLook.current.lerp(targetLook, 0.1);
 
-    smoothX.current = THREE.MathUtils.lerp(smoothX.current, targetX, 0.06);
-    smoothY.current = THREE.MathUtils.lerp(smoothY.current, targetY, 0.06);
-    smoothZ.current = THREE.MathUtils.lerp(smoothZ.current, targetZ, 0.08);
-
-    camera.position.set(smoothX.current, smoothY.current, smoothZ.current);
-
-    const lookTarget = new THREE.Vector3(state.birdX, state.birdY, state.birdZ - 15);
-    camera.lookAt(lookTarget);
+    camera.position.copy(smoothPos.current);
+    camera.lookAt(smoothLook.current);
   });
 
   return null;
