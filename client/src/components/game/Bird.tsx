@@ -7,6 +7,7 @@ export function Bird() {
   const groupRef = useRef<THREE.Group>(null);
   const modelRef = useRef<THREE.Group>(null);
   const wingRef = useRef<THREE.Group>(null);
+  const shadowRef = useRef<THREE.Mesh>(null);
   const wingTime = useRef(0);
 
   const bodyColor = useMemo(() => new THREE.Color("#FFD700"), []);
@@ -21,6 +22,15 @@ export function Bird() {
     const state = useGame.getState();
 
     groupRef.current.position.set(state.birdX, state.birdY, state.birdZ);
+
+    if (shadowRef.current) {
+      shadowRef.current.position.set(state.birdX, 0.05, state.birdZ);
+      const height = Math.max(state.birdY, 0.5);
+      const scale = THREE.MathUtils.clamp(1.2 - height * 0.06, 0.3, 1.2);
+      shadowRef.current.scale.set(scale, scale, 1);
+      const opacity = THREE.MathUtils.clamp(0.5 - height * 0.03, 0.08, 0.5);
+      (shadowRef.current.material as THREE.MeshBasicMaterial).opacity = opacity;
+    }
 
     if (state.phase === "playing") {
       const lookDist = 3;
@@ -128,8 +138,14 @@ export function Bird() {
   );
 
   return (
-    <group ref={groupRef} position={[0, 4, 0]}>
-      {birdModel}
-    </group>
+    <>
+      <mesh ref={shadowRef} position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.5, 16]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.35} depthWrite={false} />
+      </mesh>
+      <group ref={groupRef} position={[0, 4, 0]}>
+        {birdModel}
+      </group>
+    </>
   );
 }
