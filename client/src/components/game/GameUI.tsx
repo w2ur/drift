@@ -233,6 +233,7 @@ function SoundToggle() {
 const CAMERA_OPTIONS: { value: CameraAngle; label: string }[] = [
   { value: "close-left", label: "Close Left" },
   { value: "close-right", label: "Close Right" },
+  { value: "center", label: "Center" },
   { value: "far-left", label: "Far Left" },
   { value: "far-right", label: "Far Right" },
 ];

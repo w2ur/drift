@@ -58,6 +58,7 @@ function ShadowLight() {
 const CAMERA_PRESETS = {
   "close-left":  { behindDist: 6,  sideOffset: -3, height: 1.8, lookAheadZ: -10, lookY: 0.2 },
   "close-right": { behindDist: 6,  sideOffset: 3,  height: 1.8, lookAheadZ: -10, lookY: 0.2 },
+  "center":      { behindDist: 9,  sideOffset: 0,  height: 2.5, lookAheadZ: -12, lookY: -0.2 },
   "far-left":    { behindDist: 12, sideOffset: -5, height: 3.5, lookAheadZ: -14, lookY: -0.5 },
   "far-right":   { behindDist: 12, sideOffset: 5,  height: 3.5, lookAheadZ: -14, lookY: -0.5 },
 };
