@@ -18,6 +18,22 @@ interface Pipe {
   passedTime: number;
 }
 
+export type PowerUpType = "shield" | "slowmo" | "shrink";
+
+interface PowerUp {
+  id: number;
+  z: number;
+  x: number;
+  y: number;
+  type: PowerUpType;
+  collected: boolean;
+}
+
+interface ActivePowerUp {
+  type: PowerUpType;
+  remaining: number;
+}
+
 interface GameState {
   phase: GamePhase;
   score: number;
@@ -32,6 +48,11 @@ interface GameState {
   dyingTimer: number;
   gameTime: number;
   cameraAngle: CameraAngle;
+  powerUps: PowerUp[];
+  activePowerUps: ActivePowerUp[];
+  nextPowerUpId: number;
+  currentSpeed: number;
+  shieldCooldown: number;
 
   start: () => void;
   restart: () => void;
@@ -63,6 +84,12 @@ const MIN_PIPE_SPACING = 12;
 const MAX_MOVE_SPEED = 2.5;
 const MAX_MOVE_RANGE = 1.8;
 
+const BASE_BIRD_SPEED = 13;
+const MAX_BIRD_SPEED = 22;
+const POWERUP_DURATION = 6;
+const POWERUP_COLLECT_RADIUS = 1.2;
+const POWERUP_TYPES: PowerUpType[] = ["shield", "slowmo", "shrink"];
+
 function getDifficulty(score: number) {
   const t = Math.min(score / 40, 1);
 
@@ -73,7 +100,25 @@ function getDifficulty(score: number) {
   const moveSpeed = MAX_MOVE_SPEED * t;
   const moveRange = MAX_MOVE_RANGE * t;
 
-  return { gapSize, pipeSpacing, moveChance, moveSpeed, moveRange };
+  const speed = BASE_BIRD_SPEED + (MAX_BIRD_SPEED - BASE_BIRD_SPEED) * t;
+
+  return { gapSize, pipeSpacing, moveChance, moveSpeed, moveRange, speed };
+}
+
+function getSpeedForScore(score: number): number {
+  return getDifficulty(score).speed;
+}
+
+function createPowerUp(id: number, z: number, x: number, gapY: number): PowerUp {
+  const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+  return {
+    id,
+    z,
+    x,
+    y: gapY,
+    type,
+    collected: false,
+  };
 }
 
 function getPathX(z: number): number {
@@ -144,6 +189,11 @@ export const useGame = create<GameState>()(
     dyingTimer: 0,
     gameTime: 0,
     cameraAngle: "close-left" as CameraAngle,
+    powerUps: [],
+    activePowerUps: [],
+    nextPowerUpId: 0,
+    currentSpeed: BASE_BIRD_SPEED,
+    shieldCooldown: 0,
 
     getPathX,
 
@@ -166,6 +216,11 @@ export const useGame = create<GameState>()(
             pipes,
             nextPipeId: id,
             gameTime: 0,
+            powerUps: [],
+            activePowerUps: [],
+            nextPowerUpId: 0,
+            currentSpeed: BASE_BIRD_SPEED,
+            shieldCooldown: 0,
           };
         }
         return {};
@@ -184,6 +239,11 @@ export const useGame = create<GameState>()(
         nextPipeId: 0,
         dyingTimer: 0,
         gameTime: 0,
+        powerUps: [],
+        activePowerUps: [],
+        nextPowerUpId: 0,
+        currentSpeed: BASE_BIRD_SPEED,
+        shieldCooldown: 0,
       }));
     },
 
@@ -239,13 +299,24 @@ export const useGame = create<GameState>()(
       if (state.phase !== "playing") return;
 
       const clampedDelta = Math.min(delta, 0.05);
+
+      const hasSlowmo = state.activePowerUps.some(p => p.type === "slowmo");
+      const hasShield = state.activePowerUps.some(p => p.type === "shield") && state.shieldCooldown <= 0;
+      const hasShrink = state.activePowerUps.some(p => p.type === "shrink");
+
+      const speedMultiplier = hasSlowmo ? 0.5 : 1.0;
+      const diff = getDifficulty(state.score);
+      const actualSpeed = diff.speed * speedMultiplier;
+
       const newVelocity = state.birdVelocity + GRAVITY * clampedDelta;
       const newY = state.birdY + newVelocity * clampedDelta;
-      const newZ = state.birdZ - BIRD_SPEED * clampedDelta;
+      const newZ = state.birdZ - actualSpeed * clampedDelta;
       const newX = getPathX(newZ);
       const newGameTime = state.gameTime + clampedDelta;
 
-      if (newY < BIRD_VISUAL_RADIUS) {
+      const collisionRadius = hasShrink ? BIRD_VISUAL_RADIUS * 0.5 : BIRD_VISUAL_RADIUS;
+
+      if (newY < collisionRadius) {
         get().end("Hit the ground");
         return;
       }
@@ -253,8 +324,6 @@ export const useGame = create<GameState>()(
         get().end("Flew too high");
         return;
       }
-
-      const diff = getDifficulty(state.score);
 
       const movingPipes = state.pipes.map((pipe) => {
         if (pipe.moveSpeed > 0) {
@@ -266,9 +335,21 @@ export const useGame = create<GameState>()(
       });
 
       for (const pipe of movingPipes) {
-        const result = checkPipeCollision(newY, newZ, pipe, diff.gapSize);
-        if (result.hit) {
-          get().end(`Hit ${result.side} pipe`, pipe.id);
+        const dz = Math.abs(newZ - pipe.z);
+        if (dz > PIPE_RADIUS + collisionRadius) continue;
+
+        const halfGap = diff.gapSize / 2;
+        const birdBottom = newY - collisionRadius;
+        const birdTop = newY + collisionRadius;
+
+        if (birdBottom < pipe.gapY - halfGap || birdTop > pipe.gapY + halfGap) {
+          if (hasShield) {
+            const updatedActives = state.activePowerUps.filter(p => p.type !== "shield");
+            set({ activePowerUps: updatedActives, shieldCooldown: 0.5 });
+            continue;
+          }
+          const side = birdBottom < pipe.gapY - halfGap ? "bottom" : "top";
+          get().end(`Hit ${side} pipe`, pipe.id);
           return;
         }
       }
@@ -277,7 +358,7 @@ export const useGame = create<GameState>()(
 
       let scoreIncrement = 0;
       const updatedPipes = movingPipes.map((pipe) => {
-        if (!pipe.passed && newZ < pipe.z - PIPE_CAP_RADIUS - BIRD_VISUAL_RADIUS) {
+        if (!pipe.passed && newZ < pipe.z - PIPE_CAP_RADIUS - collisionRadius) {
           scoreIncrement++;
           return { ...pipe, passed: true, passedTime: 0 };
         }
@@ -289,16 +370,45 @@ export const useGame = create<GameState>()(
 
       const newScore = state.score + scoreIncrement;
 
+      const newShieldCooldown = Math.max(0, state.shieldCooldown - clampedDelta);
+
+      let collectedPowerUps = [...state.powerUps];
+      let newActives = state.activePowerUps.map(p => ({ ...p, remaining: p.remaining - clampedDelta })).filter(p => p.remaining > 0);
+
+      for (const pu of collectedPowerUps) {
+        if (pu.collected) continue;
+        const dx = newX - pu.x;
+        const dy = newY - pu.y;
+        const dz = newZ - pu.z;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist < POWERUP_COLLECT_RADIUS) {
+          pu.collected = true;
+          const existing = newActives.findIndex(a => a.type === pu.type);
+          if (existing >= 0) {
+            newActives[existing] = { ...newActives[existing], remaining: POWERUP_DURATION };
+          } else {
+            newActives.push({ type: pu.type, remaining: POWERUP_DURATION });
+          }
+        }
+      }
+      collectedPowerUps = collectedPowerUps.filter(pu => !pu.collected && pu.z > newZ - 100);
+
       const furthestZ = Math.min(...updatedPipes.map((p) => p.z));
       let finalPipes = updatedPipes;
       let nextId = state.nextPipeId;
+      let nextPuId = state.nextPowerUpId;
+      let newPowerUps = [...collectedPowerUps];
 
       if (newZ - furthestZ < 100) {
         const newDiff = getDifficulty(newScore);
         const newPipes = [];
         for (let i = 0; i < 4; i++) {
           const pz = furthestZ - newDiff.pipeSpacing * (i + 1);
-          newPipes.push(createPipe(nextId++, pz, newScore));
+          const pipe = createPipe(nextId++, pz, newScore);
+          newPipes.push(pipe);
+          if (Math.random() < 0.25) {
+            newPowerUps.push(createPowerUp(nextPuId++, pz, pipe.x, pipe.gapY));
+          }
         }
         finalPipes = [...finalPipes, ...newPipes];
       }
@@ -314,10 +424,15 @@ export const useGame = create<GameState>()(
         score: newScore,
         nextPipeId: nextId,
         gameTime: newGameTime,
+        currentSpeed: actualSpeed,
+        powerUps: newPowerUps,
+        activePowerUps: newActives,
+        nextPowerUpId: nextPuId,
+        shieldCooldown: newShieldCooldown,
       });
     },
 
   }))
 );
 
-export { GRAVITY, FLAP_FORCE, PIPE_SPACING, BIRD_SPEED, GAP_SIZE, PIPE_HEIGHT, INITIAL_PIPE_Z, PIPE_RADIUS, PIPE_CAP_RADIUS, PIPE_CAP_HEIGHT, BIRD_VISUAL_RADIUS, getPathX };
+export { GRAVITY, FLAP_FORCE, PIPE_SPACING, BIRD_SPEED, GAP_SIZE, PIPE_HEIGHT, INITIAL_PIPE_Z, PIPE_RADIUS, PIPE_CAP_RADIUS, PIPE_CAP_HEIGHT, BIRD_VISUAL_RADIUS, BASE_BIRD_SPEED, MAX_BIRD_SPEED, getPathX };

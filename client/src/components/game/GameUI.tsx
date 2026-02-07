@@ -2,6 +2,12 @@ import { useGame, CameraAngle } from "@/lib/stores/useGame";
 import { useAudio } from "@/lib/stores/useAudio";
 import { useEffect, useRef } from "react";
 
+const POWERUP_INFO: Record<string, { color: string; label: string }> = {
+  shield: { color: "#4FC3F7", label: "Shield" },
+  slowmo: { color: "#AB47BC", label: "Slow Mo" },
+  shrink: { color: "#66BB6A", label: "Shrink" },
+};
+
 function ScoreDisplay() {
   const score = useGame((s) => s.score);
   const phase = useGame((s) => s.phase);
@@ -33,6 +39,111 @@ function ScoreDisplay() {
       pointerEvents: "none",
     }}>
       {score}
+    </div>
+  );
+}
+
+function ActivePowerUps() {
+  const activePowerUps = useGame((s) => s.activePowerUps);
+  const phase = useGame((s) => s.phase);
+
+  if (phase !== "playing" || activePowerUps.length === 0) return null;
+
+  return (
+    <div style={{
+      position: "absolute",
+      top: "110px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      display: "flex",
+      gap: "8px",
+      zIndex: 10,
+      pointerEvents: "none",
+    }}>
+      {activePowerUps.map((pu, i) => {
+        const info = POWERUP_INFO[pu.type];
+        const barWidth = Math.max(0, (pu.remaining / 6) * 100);
+        return (
+          <div key={pu.type} style={{
+            background: "rgba(0,0,0,0.6)",
+            borderRadius: "8px",
+            padding: "4px 10px",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            backdropFilter: "blur(4px)",
+          }}>
+            <span style={{
+              color: info.color,
+              fontSize: "13px",
+              fontWeight: "bold",
+              fontFamily: "'Inter', sans-serif",
+            }}>
+              {info.label}
+            </span>
+            <div style={{
+              width: "40px",
+              height: "4px",
+              background: "rgba(255,255,255,0.2)",
+              borderRadius: "2px",
+              overflow: "hidden",
+            }}>
+              <div style={{
+                width: `${barWidth}%`,
+                height: "100%",
+                background: info.color,
+                borderRadius: "2px",
+                transition: "width 0.1s",
+              }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SpeedIndicator() {
+  const currentSpeed = useGame((s) => s.currentSpeed);
+  const phase = useGame((s) => s.phase);
+
+  if (phase !== "playing") return null;
+
+  const speedPercent = Math.round((currentSpeed / 22) * 100);
+
+  return (
+    <div style={{
+      position: "absolute",
+      top: "15px",
+      left: "15px",
+      zIndex: 10,
+      pointerEvents: "none",
+      background: "rgba(0,0,0,0.5)",
+      borderRadius: "8px",
+      padding: "6px 10px",
+      backdropFilter: "blur(4px)",
+    }}>
+      <div style={{
+        fontSize: "11px",
+        color: "#aaa",
+        fontFamily: "'Inter', sans-serif",
+        marginBottom: "2px",
+      }}>SPEED</div>
+      <div style={{
+        width: "60px",
+        height: "4px",
+        background: "rgba(255,255,255,0.2)",
+        borderRadius: "2px",
+        overflow: "hidden",
+      }}>
+        <div style={{
+          width: `${speedPercent}%`,
+          height: "100%",
+          background: speedPercent > 80 ? "#FF5252" : speedPercent > 50 ? "#FFD700" : "#4CAF50",
+          borderRadius: "2px",
+          transition: "width 0.3s, background 0.3s",
+        }} />
+      </div>
     </div>
   );
 }
@@ -292,6 +403,8 @@ export function GameUI() {
   return (
     <>
       <ScoreDisplay />
+      <ActivePowerUps />
+      <SpeedIndicator />
       <StartScreen />
       <GameOverScreen />
       <SoundToggle />

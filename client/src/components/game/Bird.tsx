@@ -20,6 +20,12 @@ export function Bird() {
     if (!groupRef.current || !modelRef.current) return;
     const state = useGame.getState();
 
+    const hasShrink = state.activePowerUps?.some(p => p.type === "shrink") || false;
+    const targetScale = hasShrink ? 0.5 : 1.0;
+    const currentScale = groupRef.current.scale.x;
+    const newScale = THREE.MathUtils.lerp(currentScale, targetScale, 0.15);
+    groupRef.current.scale.setScalar(newScale);
+
     groupRef.current.position.set(state.birdX, state.birdY, state.birdZ);
 
     if (state.phase === "playing") {

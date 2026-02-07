@@ -6,6 +6,8 @@ import { useAudio } from "@/lib/stores/useAudio";
 import { Bird } from "./Bird";
 import { Pipes } from "./Pipes";
 import { Ground, Sky, Clouds } from "./Ground";
+import { BirdTrail, DeathParticles } from "./Particles";
+import { PowerUpItems } from "./PowerUps";
 
 function GameLogic() {
   const prevPhase = useRef<string>("ready");
@@ -144,6 +146,50 @@ function InputHandler() {
   return null;
 }
 
+function ColorShift() {
+  const { scene } = useThree();
+  const skyMeshRef = useRef<THREE.Mesh | null>(null);
+  const lastScore = useRef(-1);
+
+  useFrame(() => {
+    const state = useGame.getState();
+    if (state.score === lastScore.current) return;
+    lastScore.current = state.score;
+
+    const t = Math.min(state.score / 50, 1);
+
+    const skyColor = new THREE.Color();
+    if (t < 0.33) {
+      skyColor.lerpColors(new THREE.Color("#87CEEB"), new THREE.Color("#FF8C42"), t / 0.33);
+    } else if (t < 0.66) {
+      skyColor.lerpColors(new THREE.Color("#FF8C42"), new THREE.Color("#6B3FA0"), (t - 0.33) / 0.33);
+    } else {
+      skyColor.lerpColors(new THREE.Color("#6B3FA0"), new THREE.Color("#1a1a3e"), (t - 0.66) / 0.34);
+    }
+
+    if (!skyMeshRef.current) {
+      scene.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.geometry instanceof THREE.SphereGeometry) {
+          const geo = child.geometry as THREE.SphereGeometry;
+          if (geo.parameters.radius === 250) {
+            skyMeshRef.current = child;
+          }
+        }
+      });
+    }
+
+    if (skyMeshRef.current) {
+      (skyMeshRef.current.material as THREE.MeshBasicMaterial).color.copy(skyColor);
+    }
+
+    if (scene.fog instanceof THREE.Fog) {
+      scene.fog.color.copy(skyColor);
+    }
+  });
+
+  return null;
+}
+
 export function GameScene() {
   return (
     <>
@@ -159,8 +205,12 @@ export function GameScene() {
       <Ground />
       <Bird />
       <Pipes />
+      <PowerUpItems />
+      <BirdTrail />
+      <DeathParticles />
 
       <CameraController />
+      <ColorShift />
 
       <fog attach="fog" args={["#87CEEB", 80, 180]} />
     </>
