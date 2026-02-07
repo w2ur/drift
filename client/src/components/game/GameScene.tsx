@@ -63,21 +63,22 @@ function CameraController() {
   useFrame(() => {
     const state = useGame.getState();
 
-    const behindDist = 10;
+    const behindDist = 6;
+    const sideOffset = 3;
     const behindZ = state.birdZ + behindDist;
     const behindX = getPathX(behindZ);
 
     const targetPos = new THREE.Vector3(
-      behindX * 0.5 + state.birdX * 0.5,
-      state.birdY + 3,
+      behindX * 0.5 + state.birdX * 0.5 + sideOffset,
+      state.birdY + 1.8,
       behindZ
     );
 
-    const lookAheadZ = state.birdZ - 12;
+    const lookAheadZ = state.birdZ - 10;
     const lookAheadX = getPathX(lookAheadZ);
     const targetLook = new THREE.Vector3(
       lookAheadX * 0.7 + state.birdX * 0.3,
-      state.birdY - 0.5,
+      state.birdY + 0.2,
       lookAheadZ
     );
 
