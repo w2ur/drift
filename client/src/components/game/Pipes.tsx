@@ -53,11 +53,11 @@ function PipePair({ x, z, gapY, hit, gapSize, passed, passedTime }: {
 
       {bottomHeight > 0 && (
         <group position={[0, bottomOffset, 0]}>
-          <mesh receiveShadow position={[0, bottomHeight / 2, 0]}>
+          <mesh castShadow receiveShadow position={[0, bottomHeight / 2, 0]}>
             <cylinderGeometry args={[PIPE_RADIUS, PIPE_RADIUS, bottomHeight, PIPE_SEGMENTS]} />
             <meshStandardMaterial color={bodyCol} />
           </mesh>
-          <mesh receiveShadow position={[0, bottomHeight + PIPE_CAP_HEIGHT / 2, 0]}>
+          <mesh castShadow receiveShadow position={[0, bottomHeight + PIPE_CAP_HEIGHT / 2, 0]}>
             <cylinderGeometry args={[PIPE_CAP_RADIUS, PIPE_CAP_RADIUS, PIPE_CAP_HEIGHT, PIPE_SEGMENTS]} />
             <meshStandardMaterial color={capCol} />
           </mesh>
@@ -66,11 +66,11 @@ function PipePair({ x, z, gapY, hit, gapSize, passed, passedTime }: {
 
       {topHeight > 0 && (
         <group position={[0, topOffset, 0]}>
-          <mesh receiveShadow position={[0, topStart + topHeight / 2, 0]}>
+          <mesh castShadow receiveShadow position={[0, topStart + topHeight / 2, 0]}>
             <cylinderGeometry args={[PIPE_RADIUS, PIPE_RADIUS, topHeight, PIPE_SEGMENTS]} />
             <meshStandardMaterial color={bodyCol} />
           </mesh>
-          <mesh receiveShadow position={[0, topStart - PIPE_CAP_HEIGHT / 2, 0]}>
+          <mesh castShadow receiveShadow position={[0, topStart - PIPE_CAP_HEIGHT / 2, 0]}>
             <cylinderGeometry args={[PIPE_CAP_RADIUS, PIPE_CAP_RADIUS, PIPE_CAP_HEIGHT, PIPE_SEGMENTS]} />
             <meshStandardMaterial color={capCol} />
           </mesh>
