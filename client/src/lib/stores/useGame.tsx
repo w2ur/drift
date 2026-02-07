@@ -27,13 +27,15 @@ interface GameState {
   updateBird: (delta: number) => void;
 }
 
-const GRAVITY = -18;
+const GRAVITY = -15;
 const FLAP_FORCE = 7;
 const PIPE_SPACING = 20;
 const BIRD_SPEED = 12;
-const GAP_SIZE = 5;
+const GAP_SIZE = 5.5;
 const PIPE_HEIGHT = 12;
 const INITIAL_PIPE_Z = -40;
+const BIRD_RADIUS = 0.3;
+const PIPE_COLLISION_DEPTH = 1.0;
 
 export const useGame = create<GameState>()(
   subscribeWithSelector((set, get) => ({
@@ -55,7 +57,7 @@ export const useGame = create<GameState>()(
             pipes.push({
               id: id++,
               z: INITIAL_PIPE_Z - i * PIPE_SPACING,
-              gapY: 2 + Math.random() * 4,
+              gapY: 3 + Math.random() * 3.5,
               passed: false,
             });
           }
@@ -119,9 +121,9 @@ export const useGame = create<GameState>()(
 
       for (const pipe of state.pipes) {
         const dz = Math.abs(newZ - pipe.z);
-        if (dz < 1.5) {
+        if (dz < PIPE_COLLISION_DEPTH) {
           const halfGap = GAP_SIZE / 2;
-          if (newY < pipe.gapY - halfGap + 0.4 || newY > pipe.gapY + halfGap - 0.4) {
+          if (newY < pipe.gapY - halfGap + BIRD_RADIUS || newY > pipe.gapY + halfGap - BIRD_RADIUS) {
             get().end();
             return;
           }
@@ -149,7 +151,7 @@ export const useGame = create<GameState>()(
           newPipes.push({
             id: nextId++,
             z: furthestZ - PIPE_SPACING * (i + 1),
-            gapY: 2 + Math.random() * 4,
+            gapY: 3 + Math.random() * 3.5,
             passed: false,
           });
         }
@@ -171,4 +173,4 @@ export const useGame = create<GameState>()(
   }))
 );
 
-export { GRAVITY, FLAP_FORCE, PIPE_SPACING, BIRD_SPEED, GAP_SIZE, PIPE_HEIGHT, INITIAL_PIPE_Z };
+export { GRAVITY, FLAP_FORCE, PIPE_SPACING, BIRD_SPEED, GAP_SIZE, PIPE_HEIGHT, INITIAL_PIPE_Z, BIRD_RADIUS, PIPE_COLLISION_DEPTH };
