@@ -22,6 +22,11 @@ function PipePair({ x, z, gapY, hit }: { x: number; z: number; gapY: number; hit
 
   return (
     <group position={[x, 0, z]}>
+      <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[PIPE_CAP_RADIUS * 1.3, 16]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.3} depthWrite={false} />
+      </mesh>
+
       {bottomHeight > 0 && (
         <group>
           <mesh position={[0, bottomHeight / 2, 0]}>
