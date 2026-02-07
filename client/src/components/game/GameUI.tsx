@@ -101,6 +101,7 @@ function GameOverScreen() {
   const score = useGame((s) => s.score);
   const bestScore = useGame((s) => s.bestScore);
   const restart = useGame((s) => s.restart);
+  const deathReason = useGame((s) => s.deathReason);
 
   if (phase !== "ended") return null;
 
@@ -145,11 +146,22 @@ function GameOverScreen() {
         <div style={{
           fontSize: "20px",
           color: "#AAAAAA",
-          margin: "0 0 30px 0",
+          margin: "0 0 10px 0",
           fontFamily: "'Inter', sans-serif",
         }}>
           Best: <span style={{ color: "#FFD700" }}>{bestScore}</span>
         </div>
+        {deathReason && (
+          <div style={{
+            fontSize: "14px",
+            color: "#FF8888",
+            margin: "0 0 20px 0",
+            fontFamily: "'Inter', sans-serif",
+            fontStyle: "italic",
+          }}>
+            {deathReason}
+          </div>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation();

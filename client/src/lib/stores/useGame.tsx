@@ -21,10 +21,11 @@ interface GameState {
   birdZ: number;
   pipes: Pipe[];
   nextPipeId: number;
+  deathReason: string;
 
   start: () => void;
   restart: () => void;
-  end: () => void;
+  end: (reason?: string) => void;
   flap: () => void;
   updateBird: (delta: number) => void;
   getPathX: (z: number) => number;
@@ -37,7 +38,7 @@ const BIRD_SPEED = 13;
 const GAP_SIZE = 5.0;
 const PIPE_HEIGHT = 12;
 const INITIAL_PIPE_Z = -40;
-const BIRD_RADIUS = 0.35;
+const BIRD_RADIUS = 0.25;
 const PIPE_RADIUS = 1.0;
 const PIPE_CAP_RADIUS = PIPE_RADIUS * 1.2;
 const PIPE_CAP_HEIGHT = 0.3;
@@ -57,6 +58,7 @@ export const useGame = create<GameState>()(
     birdZ: 0,
     pipes: [],
     nextPipeId: 0,
+    deathReason: "",
 
     getPathX,
 
@@ -103,12 +105,12 @@ export const useGame = create<GameState>()(
       }));
     },
 
-    end: () => {
+    end: (reason?: string) => {
       set((state) => {
         if (state.phase === "playing") {
           const best = Math.max(state.score, state.bestScore);
           localStorage.setItem("flappy3d_best", best.toString());
-          return { phase: "ended", bestScore: best };
+          return { phase: "ended", bestScore: best, deathReason: reason || "" };
         }
         return {};
       });
@@ -131,24 +133,29 @@ export const useGame = create<GameState>()(
       const newZ = state.birdZ - BIRD_SPEED * clampedDelta;
       const newX = getPathX(newZ);
 
-      if (newY < 0.5 || newY > 10) {
-        get().end();
+      if (newY < 0.4) {
+        get().end("Hit the ground");
+        return;
+      }
+      if (newY > 12) {
+        get().end("Flew too high");
         return;
       }
 
+      const collisionDist = PIPE_RADIUS + BIRD_RADIUS;
       for (const pipe of state.pipes) {
         const dx = newX - pipe.x;
         const dz = newZ - pipe.z;
         const distXZ = Math.sqrt(dx * dx + dz * dz);
 
-        if (distXZ < PIPE_CAP_RADIUS + BIRD_RADIUS) {
+        if (distXZ < collisionDist) {
           const halfGap = GAP_SIZE / 2;
-          const capIntrusion = PIPE_CAP_HEIGHT / 2;
-          const gapBottom = pipe.gapY - halfGap + capIntrusion + BIRD_RADIUS;
-          const gapTop = pipe.gapY + halfGap - capIntrusion - BIRD_RADIUS;
+          const gapBottom = pipe.gapY - halfGap + BIRD_RADIUS;
+          const gapTop = pipe.gapY + halfGap - BIRD_RADIUS;
 
           if (newY < gapBottom || newY > gapTop) {
-            get().end();
+            const side = newY < gapBottom ? "bottom" : "top";
+            get().end(`Hit ${side} pipe #${pipe.id}`);
             return;
           }
         }
