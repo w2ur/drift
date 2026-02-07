@@ -142,20 +142,20 @@ export const useGame = create<GameState>()(
         return;
       }
 
-      const hitboxRadius = BIRD_RADIUS * 0.5;
+      const BIRD_VISUAL_RADIUS = 0.4;
       for (const pipe of state.pipes) {
         const dz = Math.abs(newZ - pipe.z);
-        const dx = Math.abs(newX - pipe.x);
 
-        if (dz < PIPE_RADIUS && dx < PIPE_RADIUS) {
+        if (dz < PIPE_RADIUS - BIRD_VISUAL_RADIUS * 0.5) {
           const halfGap = GAP_SIZE / 2;
-          const gapBottom = pipe.gapY - halfGap + hitboxRadius;
-          const gapTop = pipe.gapY + halfGap - hitboxRadius;
+          const capTop = pipe.gapY - halfGap + PIPE_CAP_HEIGHT;
+          const capBottom = pipe.gapY + halfGap - PIPE_CAP_HEIGHT;
+          const gapBottom = capTop + BIRD_VISUAL_RADIUS;
+          const gapTop = capBottom - BIRD_VISUAL_RADIUS;
 
           if (newY < gapBottom || newY > gapTop) {
             const side = newY < gapBottom ? "bottom" : "top";
-            console.log(`DEATH: Y=${newY.toFixed(2)}, gap=${gapBottom.toFixed(1)}-${gapTop.toFixed(1)}, dz=${dz.toFixed(2)}, dx=${dx.toFixed(2)}`);
-            get().end(`Hit ${side} pipe (gap ${gapBottom.toFixed(1)}-${gapTop.toFixed(1)}, bird at ${newY.toFixed(1)})`);
+            get().end(`Hit ${side} pipe`);
             return;
           }
         }
