@@ -236,6 +236,7 @@ const CAMERA_OPTIONS: { value: CameraAngle; label: string }[] = [
   { value: "center", label: "Center" },
   { value: "far-left", label: "Far Left" },
   { value: "far-right", label: "Far Right" },
+  { value: "birdview", label: "Bird View" },
 ];
 
 function CameraSelector() {
@@ -243,7 +244,7 @@ function CameraSelector() {
   const setCameraAngle = useGame((s) => s.setCameraAngle);
   const phase = useGame((s) => s.phase);
 
-  if (phase === "dying") return null;
+  if (phase !== "ready") return null;
 
   return (
     <div style={{

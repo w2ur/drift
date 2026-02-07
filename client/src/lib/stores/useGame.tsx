@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
 export type GamePhase = "ready" | "playing" | "dying" | "ended";
-export type CameraAngle = "close-left" | "close-right" | "center" | "far-left" | "far-right";
+export type CameraAngle = "close-left" | "close-right" | "center" | "far-left" | "far-right" | "birdview";
 
 interface Pipe {
   id: number;
