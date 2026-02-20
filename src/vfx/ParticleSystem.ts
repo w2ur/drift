@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import vertexShader from "../shaders/particle.vert.glsl";
 import fragmentShader from "../shaders/particle.frag.glsl";
+import { isMobile } from "../utils/platform";
 
 interface Particle {
   position: THREE.Vector3;
@@ -37,7 +38,7 @@ export class ParticleSystem {
   private sizes: Float32Array;
   private colors: Float32Array;
 
-  constructor(maxParticles = 500) {
+  constructor(maxParticles = isMobile() ? 200 : 500) {
     this.maxParticles = maxParticles;
     this.particles = [];
 

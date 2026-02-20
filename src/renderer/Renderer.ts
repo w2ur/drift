@@ -1,17 +1,23 @@
 import * as THREE from "three";
 import { PostProcessing } from "./PostProcessing";
+import { isMobile } from "../utils/platform";
 
 export class Renderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene: THREE.Scene;
   readonly camera: THREE.PerspectiveCamera;
   private _postProcessing?: PostProcessing;
+  private _resizeHandler: () => void;
 
   constructor(container: HTMLElement) {
+    const mobile = isMobile();
+
     // WebGL renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, mobile ? 1.5 : 2.0)
+    );
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -35,10 +41,11 @@ export class Renderer {
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);
     this.scene.add(ambient);
 
+    const shadowMapSize = mobile ? 1024 : 2048;
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(8, 20, 0);
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.set(2048, 2048);
+    dirLight.shadow.mapSize.set(shadowMapSize, shadowMapSize);
     dirLight.shadow.bias = -0.001;
     dirLight.shadow.camera.left = -15;
     dirLight.shadow.camera.right = 15;
@@ -53,8 +60,10 @@ export class Renderer {
     fillLight.position.set(-5, 10, -10);
     this.scene.add(fillLight);
 
-    // Handle resize
-    window.addEventListener("resize", () => this.onResize(container));
+    // Handle resize and orientation change
+    this._resizeHandler = () => this.onResize(container);
+    window.addEventListener("resize", this._resizeHandler);
+    window.addEventListener("orientationchange", this._resizeHandler);
   }
 
   initPostProcessing(): void {
@@ -74,6 +83,11 @@ export class Renderer {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this._postProcessing?.setSize(container.clientWidth, container.clientHeight);
+  }
+
+  dispose(): void {
+    window.removeEventListener("resize", this._resizeHandler);
+    window.removeEventListener("orientationchange", this._resizeHandler);
   }
 
   render(): void {

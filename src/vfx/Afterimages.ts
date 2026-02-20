@@ -1,10 +1,11 @@
 import * as THREE from "three";
+import { isMobile } from "../utils/platform";
 
 export class Afterimages {
   readonly group = new THREE.Group();
   private ghosts: THREE.Mesh[] = [];
   private positions: THREE.Vector3[] = [];
-  private maxGhosts = 4;
+  private maxGhosts = isMobile() ? 0 : 4;
 
   constructor(
     birdGeometry: THREE.BufferGeometry,

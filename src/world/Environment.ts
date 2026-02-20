@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { isMobile } from "../utils/platform";
 
 export class Environment {
   readonly group = new THREE.Group();
@@ -29,7 +30,8 @@ export class Environment {
   }
 
   private buildClouds(): void {
-    for (let i = 0; i < 40; i++) {
+    const cloudCount = isMobile() ? 20 : 40;
+    for (let i = 0; i < cloudCount; i++) {
       const cloud = this.createCloud();
       cloud.position.set(
         (Math.random() - 0.5) * 200,
