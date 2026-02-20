@@ -165,6 +165,7 @@ export class GameEngine {
         } else if (this.powerUps.hasShield()) {
           // Shield absorbs the hit
           this.powerUps.useShield();
+          this.audio.playShieldBreak();
           if (this.bossManager.active) {
             this.bossManager.onBossPipeHit();
           }
@@ -180,6 +181,7 @@ export class GameEngine {
       if (pipeResult.scored > 0) {
         const scoreToAdd = pipeResult.scored * this.powerUps.getScoreMultiplier();
         this.scoreManager.addScore(scoreToAdd);
+        this.audio.playScore(this.scoreManager.combo);
 
         if (this.bossManager.active) {
           const bossResult = this.bossManager.onBossPipePassed();
@@ -188,6 +190,7 @@ export class GameEngine {
             if (bossResult.cleanClear) {
               this.scoreManager.addScore(bossResult.bonus);
               this.ui.showBossCleared();
+              this.audio.playBossClear();
             }
           }
         }
@@ -200,9 +203,11 @@ export class GameEngine {
         if (!wasTransitioning && this.biomeManager.isTransitioning) {
           this.bossManager.startBoss(this.biomeManager.biomeIndex);
           this.cameraController.setBossMode(true);
+          this.audio.playBossEntry();
         }
         if (this.biomeManager.biomeIndex !== prevBiomeIndex) {
           this.hazards.setActiveBiome(this.biomeManager.currentBiome.hazard);
+          this.audio.startBiomeMusic(this.biomeManager.currentBiome.name);
         }
 
         const palette = this.biomeManager.getCurrentPalette();
@@ -218,6 +223,7 @@ export class GameEngine {
         this.bulletTimeTimer = 0.2;
         this.scoreManager.registerNearMiss();
         this.ui.showCombo(this.scoreManager.combo);
+        this.audio.playNearMiss(this.scoreManager.combo);
         this.particles.emitNearMissSparks(birdPos);
         this.ui.flashEdges();
         this.cameraController.zoomPulse();
@@ -279,7 +285,10 @@ export class GameEngine {
       this.bird.physics.radius = 0.4 * targetScale;
 
       // Check power-up collection
-      this.powerUps.checkCollection(birdPos, this.bird.physics.radius);
+      const collected = this.powerUps.checkCollection(birdPos, this.bird.physics.radius);
+      if (collected) {
+        this.audio.playPowerUpCollect();
+      }
 
       // Spawn power-ups near newly scored pipes
       if (pipeResult.scored > 0) {
@@ -332,6 +341,9 @@ export class GameEngine {
         this.gameOverPending = false;
         const score = this.scoreManager.score;
         const isNewBest = score >= this.scoreManager.bestScore;
+        if (isNewBest) {
+          this.audio.playHighScore();
+        }
         this.ui.showGameOver(score, this.scoreManager.bestScore, isNewBest);
 
         const biomeName = this.biomeManager.currentBiome.name;
@@ -389,6 +401,7 @@ export class GameEngine {
     this.deathUITimer = 0.8;
     this.gameOverPending = true;
     this.dyingCaIntensity = 0.01;
+    this.audio.playDeath();
     this.cameraController.shake(0.5, 0.5);
     this.cameraController.punch(new THREE.Vector3(0, 0, 2));
     this.renderer.postProcessing?.setChromaticAberration(0.01);
@@ -453,6 +466,7 @@ export class GameEngine {
       this.renderer.postProcessing?.setSaturation(1.0);
       this.renderer.postProcessing?.setChromaticAberration(0);
       this.speedLines.update(0);
+      this.audio.stopMusic();
       this.ui.showStart(this.leaderboard.entries);
     }
   }
