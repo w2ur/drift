@@ -6,6 +6,7 @@ import { Renderer } from "../renderer/Renderer";
 import { CameraController } from "../renderer/CameraController";
 import { Bird } from "../world/Bird";
 import { PipeManager } from "../world/PipeManager";
+import { Environment } from "../world/Environment";
 
 export class GameEngine {
   readonly state = new StateMachine();
@@ -15,6 +16,7 @@ export class GameEngine {
   cameraController!: CameraController;
   bird!: Bird;
   pipeManager!: PipeManager;
+  environment!: Environment;
   private animationId = 0;
   private lastTime = 0;
   private running = false;
@@ -28,6 +30,8 @@ export class GameEngine {
     this.cameraController = new CameraController(this.renderer.camera);
     this.bird = new Bird();
     this.renderer.scene.add(this.bird.group);
+    this.environment = new Environment();
+    this.renderer.scene.add(this.environment.group);
     this.pipeManager = new PipeManager();
     this.renderer.scene.add(this.pipeManager.group);
     this.lastTime = performance.now();
@@ -82,6 +86,10 @@ export class GameEngine {
     if (phase === "dying") {
       this.bird.physics.velocity += -16 * delta;
       this.bird.physics.y += this.bird.physics.velocity * delta;
+    }
+
+    if (phase === "playing" || phase === "dying") {
+      this.environment.update(this.bird.physics.x, this.bird.physics.z);
     }
 
     this.bird.update(delta, this.state.phase === "playing", this.clock.elapsed);
