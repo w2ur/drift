@@ -9,6 +9,7 @@ import { PipeManager, getDifficulty } from "../world/PipeManager";
 import { Environment } from "../world/Environment";
 import { ScoreManager } from "../game/ScoreManager";
 import { UIManager } from "../ui/UIManager";
+import { ParticleSystem } from "../vfx/ParticleSystem";
 
 export class GameEngine {
   readonly state = new StateMachine();
@@ -21,10 +22,12 @@ export class GameEngine {
   environment!: Environment;
   scoreManager!: ScoreManager;
   ui!: UIManager;
+  particles!: ParticleSystem;
   private animationId = 0;
   private lastTime = 0;
   private running = false;
   private dyingCaIntensity = 0;
+  private trailTimer = 0;
 
   start(): void {
     if (this.running) return;
@@ -41,6 +44,8 @@ export class GameEngine {
     this.renderer.scene.add(this.pipeManager.group);
     this.scoreManager = new ScoreManager();
     this.ui = new UIManager();
+    this.particles = new ParticleSystem();
+    this.renderer.scene.add(this.particles.points);
     this.lastTime = performance.now();
     this.input.bind();
     this.input.on("flap", () => this.handleFlap());
@@ -76,12 +81,18 @@ export class GameEngine {
 
   private update(delta: number): void {
     const phase = this.state.phase;
+    const birdPos = new THREE.Vector3(
+      this.bird.physics.x,
+      this.bird.physics.y,
+      this.bird.physics.z
+    );
 
     if (phase === "playing") {
       const difficulty = getDifficulty(this.scoreManager.score);
       const currentSpeed = difficulty.speed;
       const result = this.bird.physics.tick(delta, currentSpeed);
       if (result.hitGround || result.hitCeiling) {
+        this.particles.emitDeathBurst(birdPos);
         this.state.transition("dying");
         this.cameraController.shake(0.5, 0.5);
         this.cameraController.punch(new THREE.Vector3(0, 0, 2));
@@ -100,6 +111,7 @@ export class GameEngine {
         delta
       );
       if (pipeResult.hitPipe) {
+        this.particles.emitDeathBurst(birdPos);
         this.state.transition("dying");
         this.dyingCaIntensity = 0.01;
       }
@@ -110,6 +122,14 @@ export class GameEngine {
       if (pipeResult.nearMissPipes.length > 0) {
         this.scoreManager.registerNearMiss();
         this.ui.showCombo(this.scoreManager.combo);
+        this.particles.emitNearMissSparks(birdPos);
+      }
+
+      // Periodic bird trail
+      this.trailTimer += delta;
+      if (this.trailTimer > 0.02) {
+        this.particles.emitBirdTrail(birdPos);
+        this.trailTimer = 0;
       }
     }
 
@@ -128,6 +148,7 @@ export class GameEngine {
       this.environment.update(this.bird.physics.x, this.bird.physics.z);
     }
 
+    this.particles.update(delta);
     this.bird.update(delta, this.state.phase === "playing", this.clock.elapsed);
 
     const light = this.renderer.directionalLight;
@@ -160,6 +181,13 @@ export class GameEngine {
       this.bird.physics.flap();
       this.bird.triggerSquash();
       this.cameraController.microBounce();
+      this.particles.emitFlapFeathers(
+        new THREE.Vector3(
+          this.bird.physics.x,
+          this.bird.physics.y,
+          this.bird.physics.z
+        )
+      );
     } else if (this.state.phase === "ready") {
       this.state.transition("playing");
       this.ui.showPlaying();
