@@ -62,15 +62,15 @@ export interface Difficulty {
 }
 
 export function getDifficulty(score: number): Difficulty {
-  const t = Math.min(score / 80, 1);
+  const t = Math.min(score / 150, 1);
   const eased = t * t;
   return {
-    gapSize: 5.0 - (5.0 - 3.6) * eased,
-    pipeSpacing: 18 - (18 - 12) * eased,
-    speed: 13 + (22 - 13) * eased,
-    moveChance: Math.min(score / 50, 0.7),
-    moveSpeed: 2.5 * eased,
-    moveRange: 1.8 * eased,
+    gapSize: 5.0 - (5.0 - 3.4) * eased,
+    pipeSpacing: 18 - (18 - 11) * eased,
+    speed: 13 + (20 - 13) * eased,
+    moveChance: Math.min(score / 30, 0.6),
+    moveSpeed: 1.5 + 2.0 * eased,
+    moveRange: 0.8 + 1.5 * eased,
   };
 }
 

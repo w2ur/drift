@@ -158,9 +158,28 @@ export class UIManager {
     `;
     prompt.textContent = "Click or Space to play";
 
+    const powerUpLegend = document.createElement("div");
+    powerUpLegend.style.cssText = `
+      display: flex; gap: 16px; margin-top: 20px; flex-wrap: wrap; justify-content: center;
+      font-family: 'Courier New', monospace; font-size: 11px;
+      color: rgba(255,255,255,0.5); letter-spacing: 1px;
+    `;
+    const powerUps = [
+      { symbol: "\u25CF", color: "#4FC3F7", label: "SHIELD" },
+      { symbol: "\u25CB", color: "#CE93D8", label: "SLOW-MO" },
+      { symbol: "\u25A0", color: "#EF5350", label: "GIANT" },
+      { symbol: "\u2736", color: "#FFD700", label: "x2 SCORE" },
+    ];
+    for (const pu of powerUps) {
+      const item = document.createElement("span");
+      item.innerHTML = `<span style="color:${pu.color}; font-size: 14px;">${pu.symbol}</span> ${pu.label}`;
+      powerUpLegend.appendChild(item);
+    }
+
     this.startScreen.appendChild(title);
     this.startScreen.appendChild(subtitle);
     this.startScreen.appendChild(divider);
+    this.startScreen.appendChild(powerUpLegend);
     this.startScreen.appendChild(prompt);
     this.container.appendChild(this.startScreen);
   }

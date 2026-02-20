@@ -43,15 +43,15 @@ describe("Difficulty scaling", () => {
   });
 
   it("gets harder with score", () => {
-    const d = getDifficulty(80);
+    const d = getDifficulty(150);
     expect(d.gapSize).toBeLessThan(4);
-    expect(d.speed).toBeGreaterThan(20);
+    expect(d.speed).toBeGreaterThan(18);
     expect(d.pipeSpacing).toBeLessThan(13);
   });
 
   it("caps difficulty", () => {
     const d = getDifficulty(1000);
-    expect(d.gapSize).toBeCloseTo(3.6);
-    expect(d.speed).toBeCloseTo(22);
+    expect(d.gapSize).toBeCloseTo(3.4);
+    expect(d.speed).toBeCloseTo(20);
   });
 });

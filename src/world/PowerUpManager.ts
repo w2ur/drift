@@ -99,7 +99,7 @@ export class PowerUpManager {
     const types: PowerUpType[] = ["shield", "slowmo", "giant", "scorex2"];
     const type = types[Math.floor(Math.random() * types.length)];
 
-    const geo = new THREE.OctahedronGeometry(0.5, 0);
+    const geo = PowerUpManager.createGeometry(type);
     const mat = new THREE.MeshStandardMaterial({
       color: POWER_UP_COLORS[type],
       emissive: POWER_UP_COLORS[type],
@@ -149,6 +149,23 @@ export class PowerUpManager {
       }
       return true;
     });
+  }
+
+  private static createGeometry(type: PowerUpType): THREE.BufferGeometry {
+    switch (type) {
+      case "shield":
+        // Sphere — protective bubble
+        return new THREE.SphereGeometry(0.45, 12, 8);
+      case "slowmo":
+        // Torus — clock/time ring
+        return new THREE.TorusGeometry(0.35, 0.12, 8, 16);
+      case "giant":
+        // Box — big and solid
+        return new THREE.BoxGeometry(0.7, 0.7, 0.7);
+      case "scorex2":
+        // Star-like — torus knot
+        return new THREE.TorusKnotGeometry(0.28, 0.1, 32, 8, 2, 3);
+    }
   }
 
   reset(): void {

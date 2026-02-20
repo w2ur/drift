@@ -243,11 +243,14 @@ export class GameEngine {
         this.cameraController.zoomPulse();
       }
 
-      // Periodic bird trail
-      this.trailTimer += delta;
-      if (this.trailTimer > 0.02) {
-        this.particles.emitBirdTrail(birdPos);
-        this.trailTimer = 0;
+      // Bird trail — only at high speed
+      if (currentSpeed > 16) {
+        this.trailTimer += delta;
+        const trailInterval = Math.max(0.01, 0.04 - (currentSpeed - 16) * 0.003);
+        if (this.trailTimer > trailInterval) {
+          this.particles.emitBirdTrail(birdPos);
+          this.trailTimer = 0;
+        }
       }
 
       // Speed effects

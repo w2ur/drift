@@ -139,7 +139,8 @@ export class Bird {
     const lookAheadZ = this.physics.z - 2;
     const lookAheadX = getPathX(lookAheadZ);
     const dx = lookAheadX - this.physics.x;
-    const yaw = Math.atan2(dx, -2);
+    // Bird mesh faces -Z (beak at local -Z), so rotate to align -Z with travel direction
+    const yaw = Math.atan2(-dx, 2);
     this.group.rotation.y = yaw;
 
     // Bank into turns
