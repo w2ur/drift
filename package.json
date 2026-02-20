@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/w2ur/birdie#readme",
   "dependencies": {
+    "postprocessing": "^6.38.3",
     "three": "^0.183.0"
   },
   "devDependencies": {

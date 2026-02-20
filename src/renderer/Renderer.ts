@@ -1,9 +1,11 @@
 import * as THREE from "three";
+import { PostProcessing } from "./PostProcessing";
 
 export class Renderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene: THREE.Scene;
   readonly camera: THREE.PerspectiveCamera;
+  private _postProcessing?: PostProcessing;
 
   constructor(container: HTMLElement) {
     // WebGL renderer
@@ -55,14 +57,31 @@ export class Renderer {
     window.addEventListener("resize", () => this.onResize(container));
   }
 
+  initPostProcessing(): void {
+    this._postProcessing = new PostProcessing(
+      this.renderer,
+      this.scene,
+      this.camera
+    );
+  }
+
+  get postProcessing(): PostProcessing | undefined {
+    return this._postProcessing;
+  }
+
   private onResize(container: HTMLElement): void {
     this.camera.aspect = container.clientWidth / container.clientHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(container.clientWidth, container.clientHeight);
+    this._postProcessing?.setSize(container.clientWidth, container.clientHeight);
   }
 
   render(): void {
-    this.renderer.render(this.scene, this.camera);
+    if (this._postProcessing) {
+      this._postProcessing.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 
   get directionalLight(): THREE.DirectionalLight {

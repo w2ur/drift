@@ -5,7 +5,7 @@ import { InputManager } from "./InputManager";
 import { Renderer } from "../renderer/Renderer";
 import { CameraController } from "../renderer/CameraController";
 import { Bird } from "../world/Bird";
-import { PipeManager } from "../world/PipeManager";
+import { PipeManager, getDifficulty } from "../world/PipeManager";
 import { Environment } from "../world/Environment";
 import { ScoreManager } from "../game/ScoreManager";
 import { UIManager } from "../ui/UIManager";
@@ -24,12 +24,14 @@ export class GameEngine {
   private animationId = 0;
   private lastTime = 0;
   private running = false;
+  private dyingCaIntensity = 0;
 
   start(): void {
     if (this.running) return;
     this.running = true;
     const container = document.getElementById("game")!;
     this.renderer = new Renderer(container);
+    this.renderer.initPostProcessing();
     this.cameraController = new CameraController(this.renderer.camera);
     this.bird = new Bird();
     this.renderer.scene.add(this.bird.group);
@@ -76,12 +78,18 @@ export class GameEngine {
     const phase = this.state.phase;
 
     if (phase === "playing") {
-      const result = this.bird.physics.tick(delta, 13);
+      const difficulty = getDifficulty(this.scoreManager.score);
+      const currentSpeed = difficulty.speed;
+      const result = this.bird.physics.tick(delta, currentSpeed);
       if (result.hitGround || result.hitCeiling) {
         this.state.transition("dying");
         this.cameraController.shake(0.5, 0.5);
         this.cameraController.punch(new THREE.Vector3(0, 0, 2));
+        this.dyingCaIntensity = 0.01;
       }
+
+      const caIntensity = Math.max(0, (currentSpeed - 15) * 0.001);
+      this.renderer.postProcessing?.setChromaticAberration(caIntensity);
 
       const pipeResult = this.pipeManager.update(
         this.bird.physics.y,
@@ -93,6 +101,7 @@ export class GameEngine {
       );
       if (pipeResult.hitPipe) {
         this.state.transition("dying");
+        this.dyingCaIntensity = 0.01;
       }
       if (pipeResult.scored > 0) {
         this.scoreManager.addScore(pipeResult.scored);
@@ -110,6 +119,9 @@ export class GameEngine {
       if (this.bird.physics.y <= 0) {
         this.state.transition("ended");
       }
+
+      this.dyingCaIntensity *= 0.9;
+      this.renderer.postProcessing?.setChromaticAberration(this.dyingCaIntensity);
     }
 
     if (phase === "playing" || phase === "dying") {
