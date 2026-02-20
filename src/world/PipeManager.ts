@@ -273,6 +273,15 @@ export class PipeManager {
     return { scored, hitPipe, nearMissPipes };
   }
 
+  removePipeById(id: number): void {
+    const mesh = this.meshes.get(id);
+    if (mesh) {
+      this.group.remove(mesh);
+      this.meshes.delete(id);
+    }
+    this.pipes = this.pipes.filter((p) => p.id !== id);
+  }
+
   reset(): void {
     this.pipes = [];
     this.nextId = 0;

@@ -9,12 +9,15 @@ import { PipeManager, getDifficulty } from "../world/PipeManager";
 import { Environment } from "../world/Environment";
 import { BiomeManager } from "../world/BiomeManager";
 import { ScoreManager } from "../game/ScoreManager";
+import { LeaderboardManager } from "../game/LeaderboardManager";
 import { UIManager } from "../ui/UIManager";
 import { ParticleSystem } from "../vfx/ParticleSystem";
 import { SpeedLines } from "../vfx/SpeedLines";
 import { Afterimages } from "../vfx/Afterimages";
 import { BossManager } from "../world/BossManager";
 import { HazardManager } from "../world/hazards/HazardManager";
+import { PowerUpManager } from "../world/PowerUpManager";
+import { AudioManager } from "../audio/AudioManager";
 
 export class GameEngine {
   readonly state = new StateMachine();
@@ -26,6 +29,7 @@ export class GameEngine {
   pipeManager!: PipeManager;
   environment!: Environment;
   scoreManager!: ScoreManager;
+  leaderboard!: LeaderboardManager;
   ui!: UIManager;
   particles!: ParticleSystem;
   speedLines!: SpeedLines;
@@ -33,6 +37,8 @@ export class GameEngine {
   biomeManager!: BiomeManager;
   bossManager!: BossManager;
   hazards!: HazardManager;
+  powerUps!: PowerUpManager;
+  audio!: AudioManager;
   private animationId = 0;
   private lastTime = 0;
   private running = false;
@@ -58,6 +64,7 @@ export class GameEngine {
     this.pipeManager = new PipeManager();
     this.renderer.scene.add(this.pipeManager.group);
     this.scoreManager = new ScoreManager();
+    this.leaderboard = new LeaderboardManager();
     this.ui = new UIManager();
     this.particles = new ParticleSystem();
     this.renderer.scene.add(this.particles.points);
@@ -76,11 +83,16 @@ export class GameEngine {
     this.bossManager = new BossManager();
     this.hazards = new HazardManager();
     this.renderer.scene.add(this.hazards.group);
+    this.powerUps = new PowerUpManager();
+    this.renderer.scene.add(this.powerUps.group);
+
+    this.audio = new AudioManager();
 
     this.lastTime = performance.now();
     this.input.bind();
     this.input.on("flap", () => this.handleFlap());
     this.input.on("restart", () => this.handleRestart());
+    this.input.on("mute", () => this.audio.toggleMute());
 
     this.state.on("ended", () => {
       this.scoreManager.finalize();
@@ -143,15 +155,31 @@ export class GameEngine {
         delta
       );
       if (pipeResult.hitPipe) {
-        if (this.bossManager.active) {
-          this.bossManager.onBossPipeHit();
+        if (this.powerUps.isGiant()) {
+          // Giant smash: destroy the pipe and continue
+          this.powerUps.useGiantSmash();
+          this.bird.group.scale.setScalar(1);
+          this.bird.physics.radius = 0.4;
+          this.pipeManager.removePipeById(pipeResult.hitPipe.id);
+          this.particles.emitDeathBurst(birdPos);
+        } else if (this.powerUps.hasShield()) {
+          // Shield absorbs the hit
+          this.powerUps.useShield();
+          if (this.bossManager.active) {
+            this.bossManager.onBossPipeHit();
+          }
+        } else {
+          if (this.bossManager.active) {
+            this.bossManager.onBossPipeHit();
+          }
+          this.particles.emitDeathBurst(birdPos);
+          this.state.transition("dying");
+          this.startDeathSequence();
         }
-        this.particles.emitDeathBurst(birdPos);
-        this.state.transition("dying");
-        this.startDeathSequence();
       }
       if (pipeResult.scored > 0) {
-        this.scoreManager.addScore(pipeResult.scored);
+        const scoreToAdd = pipeResult.scored * this.powerUps.getScoreMultiplier();
+        this.scoreManager.addScore(scoreToAdd);
 
         if (this.bossManager.active) {
           const bossResult = this.bossManager.onBossPipePassed();
@@ -232,6 +260,35 @@ export class GameEngine {
         this.startDeathSequence();
       }
       this.hazards.ring.update(delta, this.bird.physics.z);
+
+      // Power-ups: update timers and animations
+      this.powerUps.update(delta);
+      this.powerUps.cleanupBehind(this.bird.physics.z);
+
+      // Apply slow-mo time scale (only when no bullet-time or death freeze is active)
+      if (this.bulletTimeTimer <= 0) {
+        const slowmoScale = this.powerUps.getTimeScale();
+        if (slowmoScale !== this.clock.timeScale) {
+          this.clock.timeScale = slowmoScale;
+        }
+      }
+
+      // Sync bird visual scale with giant power-up
+      const targetScale = this.powerUps.getBirdScale();
+      this.bird.group.scale.setScalar(targetScale);
+      this.bird.physics.radius = 0.4 * targetScale;
+
+      // Check power-up collection
+      this.powerUps.checkCollection(birdPos, this.bird.physics.radius);
+
+      // Spawn power-ups near newly scored pipes
+      if (pipeResult.scored > 0) {
+        for (const pipe of this.pipeManager.pipes) {
+          if (pipe.passed) {
+            this.powerUps.spawnNearPipe(pipe.x, pipe.gapY, pipe.z - 5);
+          }
+        }
+      }
     }
 
     if (phase === "dying") {
@@ -273,13 +330,23 @@ export class GameEngine {
       this.deathUITimer -= this.clock.delta;
       if (this.deathUITimer <= 0) {
         this.gameOverPending = false;
-        const isNewBest =
-          this.scoreManager.score >= this.scoreManager.bestScore;
-        this.ui.showGameOver(
-          this.scoreManager.score,
-          this.scoreManager.bestScore,
-          isNewBest
-        );
+        const score = this.scoreManager.score;
+        const isNewBest = score >= this.scoreManager.bestScore;
+        this.ui.showGameOver(score, this.scoreManager.bestScore, isNewBest);
+
+        const biomeName = this.biomeManager.currentBiome.name;
+        const showLeaderboard = (): void => {
+          this.ui.showLeaderboard(this.leaderboard.entries);
+        };
+
+        if (this.leaderboard.qualifies(score)) {
+          this.ui.showPseudoInput((name: string) => {
+            this.leaderboard.addEntry(name, score, biomeName);
+            showLeaderboard();
+          });
+        } else {
+          showLeaderboard();
+        }
       }
     }
 
@@ -338,6 +405,7 @@ export class GameEngine {
       this.bird.physics.flap();
       this.bird.triggerSquash();
       this.cameraController.microBounce();
+      this.audio.playFlap();
       this.particles.emitFlapFeathers(
         new THREE.Vector3(
           this.bird.physics.x,
@@ -352,6 +420,7 @@ export class GameEngine {
       this.bird.physics.velocity = 2;
       this.bird.physics.flap();
       this.bird.triggerSquash();
+      this.audio.playFlap();
     }
   }
 
@@ -362,6 +431,9 @@ export class GameEngine {
       this.biomeManager.reset();
       this.bossManager.reset();
       this.hazards.reset();
+      this.powerUps.reset();
+      this.bird.group.scale.setScalar(1);
+      this.bird.physics.radius = 0.4;
       this.cameraController.setBossMode(false);
       const defaultPalette = this.biomeManager.getCurrentPalette();
       this.environment.setSkyColor(defaultPalette.sky);
@@ -381,7 +453,7 @@ export class GameEngine {
       this.renderer.postProcessing?.setSaturation(1.0);
       this.renderer.postProcessing?.setChromaticAberration(0);
       this.speedLines.update(0);
-      this.ui.showStart();
+      this.ui.showStart(this.leaderboard.entries);
     }
   }
 }
