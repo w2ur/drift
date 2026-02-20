@@ -10,6 +10,8 @@ import { Environment } from "../world/Environment";
 import { ScoreManager } from "../game/ScoreManager";
 import { UIManager } from "../ui/UIManager";
 import { ParticleSystem } from "../vfx/ParticleSystem";
+import { SpeedLines } from "../vfx/SpeedLines";
+import { Afterimages } from "../vfx/Afterimages";
 
 export class GameEngine {
   readonly state = new StateMachine();
@@ -23,6 +25,8 @@ export class GameEngine {
   scoreManager!: ScoreManager;
   ui!: UIManager;
   particles!: ParticleSystem;
+  speedLines!: SpeedLines;
+  afterimages!: Afterimages;
   private animationId = 0;
   private lastTime = 0;
   private running = false;
@@ -51,6 +55,17 @@ export class GameEngine {
     this.ui = new UIManager();
     this.particles = new ParticleSystem();
     this.renderer.scene.add(this.particles.points);
+
+    this.speedLines = new SpeedLines();
+    this.renderer.camera.add(this.speedLines.mesh);
+    this.renderer.scene.add(this.renderer.camera);
+
+    this.afterimages = new Afterimages(
+      new THREE.SphereGeometry(0.4, 16, 12),
+      0xffd700
+    );
+    this.renderer.scene.add(this.afterimages.group);
+
     this.lastTime = performance.now();
     this.input.bind();
     this.input.on("flap", () => this.handleFlap());
@@ -141,6 +156,10 @@ export class GameEngine {
         this.particles.emitBirdTrail(birdPos);
         this.trailTimer = 0;
       }
+
+      // Speed effects
+      this.speedLines.update(currentSpeed);
+      this.afterimages.update(birdPos, this.bird.group.rotation, currentSpeed);
     }
 
     if (phase === "dying") {
@@ -234,6 +253,12 @@ export class GameEngine {
     this.cameraController.shake(0.5, 0.5);
     this.cameraController.punch(new THREE.Vector3(0, 0, 2));
     this.renderer.postProcessing?.setChromaticAberration(0.01);
+    this.speedLines.update(0);
+    this.afterimages.update(
+      new THREE.Vector3(this.bird.physics.x, this.bird.physics.y, this.bird.physics.z),
+      this.bird.group.rotation,
+      0
+    );
   }
 
   private handleFlap(): void {
@@ -272,6 +297,7 @@ export class GameEngine {
       this.renderer.postProcessing?.setVignetteDarkness(0.4);
       this.renderer.postProcessing?.setSaturation(1.0);
       this.renderer.postProcessing?.setChromaticAberration(0);
+      this.speedLines.update(0);
       this.ui.showStart();
     }
   }
