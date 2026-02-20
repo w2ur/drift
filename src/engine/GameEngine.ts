@@ -7,6 +7,7 @@ import { CameraController } from "../renderer/CameraController";
 import { Bird } from "../world/Bird";
 import { PipeManager, getDifficulty } from "../world/PipeManager";
 import { Environment } from "../world/Environment";
+import { BiomeManager } from "../world/BiomeManager";
 import { ScoreManager } from "../game/ScoreManager";
 import { UIManager } from "../ui/UIManager";
 import { ParticleSystem } from "../vfx/ParticleSystem";
@@ -27,6 +28,7 @@ export class GameEngine {
   particles!: ParticleSystem;
   speedLines!: SpeedLines;
   afterimages!: Afterimages;
+  biomeManager!: BiomeManager;
   private animationId = 0;
   private lastTime = 0;
   private running = false;
@@ -65,6 +67,8 @@ export class GameEngine {
       0xffd700
     );
     this.renderer.scene.add(this.afterimages.group);
+
+    this.biomeManager = new BiomeManager();
 
     this.lastTime = performance.now();
     this.input.bind();
@@ -139,6 +143,14 @@ export class GameEngine {
       if (pipeResult.scored > 0) {
         this.scoreManager.addScore(pipeResult.scored);
         this.ui.updateScore(this.scoreManager.score);
+        this.biomeManager.onPipePassed(this.scoreManager.score);
+        const palette = this.biomeManager.getCurrentPalette();
+        this.environment.setSkyColor(palette.sky);
+        this.environment.setGroundColor(palette.ground);
+        const fog = this.renderer.scene.fog as THREE.Fog;
+        fog.color.copy(palette.fog);
+        fog.near = palette.fogNear;
+        fog.far = palette.fogFar;
       }
       if (pipeResult.nearMissPipes.length > 0) {
         this.clock.timeScale = 0.3;
@@ -287,6 +299,14 @@ export class GameEngine {
     if (this.state.phase === "ended") {
       this.pipeManager.reset();
       this.scoreManager.reset();
+      this.biomeManager.reset();
+      const defaultPalette = this.biomeManager.getCurrentPalette();
+      this.environment.setSkyColor(defaultPalette.sky);
+      this.environment.setGroundColor(defaultPalette.ground);
+      const fog = this.renderer.scene.fog as THREE.Fog;
+      fog.color.copy(defaultPalette.fog);
+      fog.near = defaultPalette.fogNear;
+      fog.far = defaultPalette.fogFar;
       this.state.reset();
       this.clock.timeScale = 1.0;
       this.freezeTimer = 0;
