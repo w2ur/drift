@@ -6,6 +6,7 @@ import {
   BloomEffect,
   ChromaticAberrationEffect,
   VignetteEffect,
+  HueSaturationEffect,
   BlendFunction,
 } from "postprocessing";
 
@@ -14,6 +15,7 @@ export class PostProcessing {
   private chromaticAberration: ChromaticAberrationEffect;
   private bloom: BloomEffect;
   private vignette: VignetteEffect;
+  private hueSaturation: HueSaturationEffect;
   private caOffset = new THREE.Vector2(0, 0);
 
   constructor(
@@ -44,11 +46,16 @@ export class PostProcessing {
       offset: 0.3,
     });
 
+    this.hueSaturation = new HueSaturationEffect({
+      saturation: 0,
+    });
+
     const effectPass = new EffectPass(
       camera,
       this.bloom,
       this.chromaticAberration,
-      this.vignette
+      this.vignette,
+      this.hueSaturation
     );
     this.composer.addPass(effectPass);
   }
@@ -72,5 +79,11 @@ export class PostProcessing {
 
   setVignetteDarkness(darkness: number): void {
     this.vignette.darkness = darkness;
+  }
+
+  setSaturation(value: number): void {
+    // value: 1 = full color (no change), 0 = grayscale
+    // HueSaturationEffect saturation: 0 = no change, -1 = fully desaturated
+    this.hueSaturation.saturation = value - 1;
   }
 }
