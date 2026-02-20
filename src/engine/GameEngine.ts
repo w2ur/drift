@@ -7,6 +7,8 @@ import { CameraController } from "../renderer/CameraController";
 import { Bird } from "../world/Bird";
 import { PipeManager } from "../world/PipeManager";
 import { Environment } from "../world/Environment";
+import { ScoreManager } from "../game/ScoreManager";
+import { UIManager } from "../ui/UIManager";
 
 export class GameEngine {
   readonly state = new StateMachine();
@@ -17,10 +19,11 @@ export class GameEngine {
   bird!: Bird;
   pipeManager!: PipeManager;
   environment!: Environment;
+  scoreManager!: ScoreManager;
+  ui!: UIManager;
   private animationId = 0;
   private lastTime = 0;
   private running = false;
-  private score = 0;
 
   start(): void {
     if (this.running) return;
@@ -34,10 +37,23 @@ export class GameEngine {
     this.renderer.scene.add(this.environment.group);
     this.pipeManager = new PipeManager();
     this.renderer.scene.add(this.pipeManager.group);
+    this.scoreManager = new ScoreManager();
+    this.ui = new UIManager();
     this.lastTime = performance.now();
     this.input.bind();
     this.input.on("flap", () => this.handleFlap());
     this.input.on("restart", () => this.handleRestart());
+
+    this.state.on("ended", () => {
+      const isNewBest = this.scoreManager.score >= this.scoreManager.bestScore;
+      this.scoreManager.finalize();
+      this.ui.showGameOver(
+        this.scoreManager.score,
+        this.scoreManager.bestScore,
+        isNewBest
+      );
+    });
+
     this.loop();
   }
 
@@ -71,7 +87,7 @@ export class GameEngine {
         this.bird.physics.y,
         this.bird.physics.z,
         this.bird.physics.radius,
-        this.score,
+        this.scoreManager.score,
         this.clock.elapsed,
         delta
       );
@@ -79,13 +95,21 @@ export class GameEngine {
         this.state.transition("dying");
       }
       if (pipeResult.scored > 0) {
-        this.score += pipeResult.scored;
+        this.scoreManager.addScore(pipeResult.scored);
+        this.ui.updateScore(this.scoreManager.score);
+      }
+      if (pipeResult.nearMissPipes.length > 0) {
+        this.scoreManager.registerNearMiss();
+        this.ui.showCombo(this.scoreManager.combo);
       }
     }
 
     if (phase === "dying") {
       this.bird.physics.velocity += -16 * delta;
       this.bird.physics.y += this.bird.physics.velocity * delta;
+      if (this.bird.physics.y <= 0) {
+        this.state.transition("ended");
+      }
     }
 
     if (phase === "playing" || phase === "dying") {
@@ -126,6 +150,7 @@ export class GameEngine {
       this.cameraController.microBounce();
     } else if (this.state.phase === "ready") {
       this.state.transition("playing");
+      this.ui.showPlaying();
       this.pipeManager.spawn(8, -40, 0);
       this.bird.physics.velocity = 2;
       this.bird.physics.flap();
@@ -136,8 +161,9 @@ export class GameEngine {
   private handleRestart(): void {
     if (this.state.phase === "ended") {
       this.pipeManager.reset();
-      this.score = 0;
+      this.scoreManager.reset();
       this.state.reset();
+      this.ui.showStart();
     }
   }
 }

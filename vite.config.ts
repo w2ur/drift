@@ -12,6 +12,11 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    // Three.js is a large monolithic library; code-splitting is not viable for a game bundle
+    chunkSizeWarningLimit: 600,
   },
   assetsInclude: ["**/*.gltf", "**/*.glb", "**/*.mp3", "**/*.ogg", "**/*.wav"],
+  test: {
+    setupFiles: ["src/test-setup.ts"],
+  },
 });
