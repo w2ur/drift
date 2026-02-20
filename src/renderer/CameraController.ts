@@ -29,6 +29,10 @@ export class CameraController {
   private zoomOffset = 0;
   private targetZoomOffset = 0;
 
+  // Boss mode — smoothly zoom out
+  private targetBehindDist = 6;
+  private targetHeight = 1.8;
+
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
   }
@@ -42,6 +46,10 @@ export class CameraController {
     elapsed: number
   ): void {
     const lerpSpeed = isDying ? 0.03 : 0.12;
+
+    // Boss mode smooth transition
+    this.behindDist += (this.targetBehindDist - this.behindDist) * 0.05;
+    this.height += (this.targetHeight - this.height) * 0.05;
 
     // Zoom pulse spring
     this.zoomOffset += (this.targetZoomOffset - this.zoomOffset) * 0.1;
@@ -100,6 +108,11 @@ export class CameraController {
   zoomPulse(): void {
     this.zoomOffset = 1;
     this.targetZoomOffset = 0;
+  }
+
+  setBossMode(active: boolean): void {
+    this.targetBehindDist = active ? 15 : 6;
+    this.targetHeight = active ? 4 : 1.8;
   }
 
   private updateShake(delta: number, elapsed: number): void {

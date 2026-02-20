@@ -174,6 +174,27 @@ export class UIManager {
     }, 800);
   }
 
+  showBossCleared(): void {
+    const el = document.createElement("div");
+    el.style.cssText = `
+      position: absolute; top: 35%; left: 50%; transform: translateX(-50%);
+      font-size: 42px; font-weight: 900; color: #FFD700;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 20px rgba(255,215,0,0.6);
+      font-family: system-ui; z-index: 15; pointer-events: none;
+      animation: slideUp 0.4s ease-out;
+      white-space: nowrap;
+    `;
+    el.textContent = "BOSS CLEARED! +10";
+    this.container.appendChild(el);
+    setTimeout(() => {
+      el.style.transition = "opacity 0.5s ease-out";
+      el.style.opacity = "0";
+    }, 1200);
+    setTimeout(() => {
+      if (this.container.contains(el)) this.container.removeChild(el);
+    }, 1700);
+  }
+
   flashEdges(): void {
     const flash = document.createElement("div");
     flash.style.cssText = `

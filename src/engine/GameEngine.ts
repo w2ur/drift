@@ -13,6 +13,7 @@ import { UIManager } from "../ui/UIManager";
 import { ParticleSystem } from "../vfx/ParticleSystem";
 import { SpeedLines } from "../vfx/SpeedLines";
 import { Afterimages } from "../vfx/Afterimages";
+import { BossManager } from "../world/BossManager";
 
 export class GameEngine {
   readonly state = new StateMachine();
@@ -29,6 +30,7 @@ export class GameEngine {
   speedLines!: SpeedLines;
   afterimages!: Afterimages;
   biomeManager!: BiomeManager;
+  bossManager!: BossManager;
   private animationId = 0;
   private lastTime = 0;
   private running = false;
@@ -69,6 +71,7 @@ export class GameEngine {
     this.renderer.scene.add(this.afterimages.group);
 
     this.biomeManager = new BiomeManager();
+    this.bossManager = new BossManager();
 
     this.lastTime = performance.now();
     this.input.bind();
@@ -136,14 +139,36 @@ export class GameEngine {
         delta
       );
       if (pipeResult.hitPipe) {
+        if (this.bossManager.active) {
+          this.bossManager.onBossPipeHit();
+        }
         this.particles.emitDeathBurst(birdPos);
         this.state.transition("dying");
         this.startDeathSequence();
       }
       if (pipeResult.scored > 0) {
         this.scoreManager.addScore(pipeResult.scored);
+
+        if (this.bossManager.active) {
+          const bossResult = this.bossManager.onBossPipePassed();
+          if (bossResult.complete) {
+            this.cameraController.setBossMode(false);
+            if (bossResult.cleanClear) {
+              this.scoreManager.addScore(bossResult.bonus);
+              this.ui.showBossCleared();
+            }
+          }
+        }
+
         this.ui.updateScore(this.scoreManager.score);
+
+        const wasTransitioning = this.biomeManager.isTransitioning;
         this.biomeManager.onPipePassed(this.scoreManager.score);
+        if (!wasTransitioning && this.biomeManager.isTransitioning) {
+          this.bossManager.startBoss(this.biomeManager.biomeIndex);
+          this.cameraController.setBossMode(true);
+        }
+
         const palette = this.biomeManager.getCurrentPalette();
         this.environment.setSkyColor(palette.sky);
         this.environment.setGroundColor(palette.ground);
@@ -300,6 +325,8 @@ export class GameEngine {
       this.pipeManager.reset();
       this.scoreManager.reset();
       this.biomeManager.reset();
+      this.bossManager.reset();
+      this.cameraController.setBossMode(false);
       const defaultPalette = this.biomeManager.getCurrentPalette();
       this.environment.setSkyColor(defaultPalette.sky);
       this.environment.setGroundColor(defaultPalette.ground);
