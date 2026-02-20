@@ -304,11 +304,12 @@ export class GameEngine {
         this.audio.playPowerUpCollect();
       }
 
-      // Spawn power-ups near newly scored pipes
+      // Spawn power-ups near upcoming pipes (ahead of the bird)
       if (pipeResult.scored > 0) {
         for (const pipe of this.pipeManager.pipes) {
-          if (pipe.passed) {
-            this.powerUps.spawnNearPipe(pipe.x, pipe.gapY, pipe.z - 5);
+          if (!pipe.passed && !pipe.hit && pipe.z < this.bird.physics.z - 15) {
+            this.powerUps.spawnNearPipe(pipe.x, pipe.gapY, pipe.z);
+            break; // only one spawn attempt per score
           }
         }
       }
@@ -453,6 +454,7 @@ export class GameEngine {
 
   private handleRestart(): void {
     if (this.state.phase === "ended") {
+      this.bird.physics.reset();
       this.pipeManager.reset();
       this.scoreManager.reset();
       this.biomeManager.reset();
@@ -460,7 +462,6 @@ export class GameEngine {
       this.hazards.reset();
       this.powerUps.reset();
       this.bird.group.scale.setScalar(1);
-      this.bird.physics.radius = 0.4;
       this.cameraController.setBossMode(false);
       const defaultPalette = this.biomeManager.getCurrentPalette();
       this.pipeManager.setBiome(
