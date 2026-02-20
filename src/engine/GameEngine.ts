@@ -5,6 +5,7 @@ import { InputManager } from "./InputManager";
 import { Renderer } from "../renderer/Renderer";
 import { CameraController } from "../renderer/CameraController";
 import { Bird } from "../world/Bird";
+import { PipeManager } from "../world/PipeManager";
 
 export class GameEngine {
   readonly state = new StateMachine();
@@ -13,9 +14,11 @@ export class GameEngine {
   renderer!: Renderer;
   cameraController!: CameraController;
   bird!: Bird;
+  pipeManager!: PipeManager;
   private animationId = 0;
   private lastTime = 0;
   private running = false;
+  private score = 0;
 
   start(): void {
     if (this.running) return;
@@ -25,6 +28,8 @@ export class GameEngine {
     this.cameraController = new CameraController(this.renderer.camera);
     this.bird = new Bird();
     this.renderer.scene.add(this.bird.group);
+    this.pipeManager = new PipeManager();
+    this.renderer.scene.add(this.pipeManager.group);
     this.lastTime = performance.now();
     this.input.bind();
     this.input.on("flap", () => this.handleFlap());
@@ -56,6 +61,21 @@ export class GameEngine {
         this.state.transition("dying");
         this.cameraController.shake(0.5, 0.5);
         this.cameraController.punch(new THREE.Vector3(0, 0, 2));
+      }
+
+      const pipeResult = this.pipeManager.update(
+        this.bird.physics.y,
+        this.bird.physics.z,
+        this.bird.physics.radius,
+        this.score,
+        this.clock.elapsed,
+        delta
+      );
+      if (pipeResult.hitPipe) {
+        this.state.transition("dying");
+      }
+      if (pipeResult.scored > 0) {
+        this.score += pipeResult.scored;
       }
     }
 
@@ -98,6 +118,7 @@ export class GameEngine {
       this.cameraController.microBounce();
     } else if (this.state.phase === "ready") {
       this.state.transition("playing");
+      this.pipeManager.spawn(8, -40, 0);
       this.bird.physics.velocity = 2;
       this.bird.physics.flap();
       this.bird.triggerSquash();
@@ -106,6 +127,8 @@ export class GameEngine {
 
   private handleRestart(): void {
     if (this.state.phase === "ended") {
+      this.pipeManager.reset();
+      this.score = 0;
       this.state.reset();
     }
   }
