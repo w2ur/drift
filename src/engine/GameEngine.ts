@@ -1,7 +1,9 @@
+import * as THREE from "three";
 import { StateMachine } from "./StateMachine";
 import { Clock } from "./Clock";
 import { InputManager } from "./InputManager";
 import { Renderer } from "../renderer/Renderer";
+import { CameraController } from "../renderer/CameraController";
 import { Bird } from "../world/Bird";
 
 export class GameEngine {
@@ -9,6 +11,7 @@ export class GameEngine {
   readonly clock = new Clock();
   readonly input = new InputManager();
   renderer!: Renderer;
+  cameraController!: CameraController;
   bird!: Bird;
   private animationId = 0;
   private lastTime = 0;
@@ -19,6 +22,7 @@ export class GameEngine {
     this.running = true;
     const container = document.getElementById("game")!;
     this.renderer = new Renderer(container);
+    this.cameraController = new CameraController(this.renderer.camera);
     this.bird = new Bird();
     this.renderer.scene.add(this.bird.group);
     this.lastTime = performance.now();
@@ -50,6 +54,8 @@ export class GameEngine {
       const result = this.bird.physics.tick(delta, 13);
       if (result.hitGround || result.hitCeiling) {
         this.state.transition("dying");
+        this.cameraController.shake(0.5, 0.5);
+        this.cameraController.punch(new THREE.Vector3(0, 0, 2));
       }
     }
 
@@ -73,6 +79,15 @@ export class GameEngine {
     );
     light.target.updateMatrixWorld();
 
+    this.cameraController.update(
+      this.bird.physics.x,
+      this.bird.physics.y,
+      this.bird.physics.z,
+      this.state.phase === "dying",
+      delta,
+      this.clock.elapsed
+    );
+
     this.renderer.render();
   }
 
@@ -80,6 +95,7 @@ export class GameEngine {
     if (this.state.phase === "playing") {
       this.bird.physics.flap();
       this.bird.triggerSquash();
+      this.cameraController.microBounce();
     } else if (this.state.phase === "ready") {
       this.state.transition("playing");
       this.bird.physics.velocity = 2;
