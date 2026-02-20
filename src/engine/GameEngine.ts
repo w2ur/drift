@@ -14,6 +14,7 @@ import { ParticleSystem } from "../vfx/ParticleSystem";
 import { SpeedLines } from "../vfx/SpeedLines";
 import { Afterimages } from "../vfx/Afterimages";
 import { BossManager } from "../world/BossManager";
+import { HazardManager } from "../world/hazards/HazardManager";
 
 export class GameEngine {
   readonly state = new StateMachine();
@@ -31,6 +32,7 @@ export class GameEngine {
   afterimages!: Afterimages;
   biomeManager!: BiomeManager;
   bossManager!: BossManager;
+  hazards!: HazardManager;
   private animationId = 0;
   private lastTime = 0;
   private running = false;
@@ -72,6 +74,8 @@ export class GameEngine {
 
     this.biomeManager = new BiomeManager();
     this.bossManager = new BossManager();
+    this.hazards = new HazardManager();
+    this.renderer.scene.add(this.hazards.group);
 
     this.lastTime = performance.now();
     this.input.bind();
@@ -163,10 +167,14 @@ export class GameEngine {
         this.ui.updateScore(this.scoreManager.score);
 
         const wasTransitioning = this.biomeManager.isTransitioning;
+        const prevBiomeIndex = this.biomeManager.biomeIndex;
         this.biomeManager.onPipePassed(this.scoreManager.score);
         if (!wasTransitioning && this.biomeManager.isTransitioning) {
           this.bossManager.startBoss(this.biomeManager.biomeIndex);
           this.cameraController.setBossMode(true);
+        }
+        if (this.biomeManager.biomeIndex !== prevBiomeIndex) {
+          this.hazards.setActiveBiome(this.biomeManager.currentBiome.hazard);
         }
 
         const palette = this.biomeManager.getCurrentPalette();
@@ -197,6 +205,33 @@ export class GameEngine {
       // Speed effects
       this.speedLines.update(currentSpeed);
       this.afterimages.update(birdPos, this.bird.group.rotation, currentSpeed);
+
+      // Hazards
+      const windDisplacement = this.hazards.wind.update(delta, this.bird.physics.z);
+      if (windDisplacement !== 0) {
+        this.bird.physics.x += windDisplacement;
+      }
+      const lightningResult = this.hazards.lightning.update(
+        delta,
+        this.bird.physics.x,
+        this.bird.physics.z
+      );
+      if (lightningResult.flash) {
+        this.renderer.postProcessing?.setChromaticAberration(0.008);
+      }
+      const hitLaser = this.hazards.laser.update(
+        delta,
+        this.bird.physics.x,
+        this.bird.physics.y,
+        this.bird.physics.z,
+        this.bird.physics.radius
+      );
+      if (hitLaser) {
+        this.particles.emitDeathBurst(birdPos);
+        this.state.transition("dying");
+        this.startDeathSequence();
+      }
+      this.hazards.ring.update(delta, this.bird.physics.z);
     }
 
     if (phase === "dying") {
@@ -326,6 +361,7 @@ export class GameEngine {
       this.scoreManager.reset();
       this.biomeManager.reset();
       this.bossManager.reset();
+      this.hazards.reset();
       this.cameraController.setBossMode(false);
       const defaultPalette = this.biomeManager.getCurrentPalette();
       this.environment.setSkyColor(defaultPalette.sky);
