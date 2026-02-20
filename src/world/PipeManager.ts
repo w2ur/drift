@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { getPathX } from "./Bird";
+import { ToonMaterial } from "../shaders/ToonMaterial";
 
 // --- Pure functions (exported for testing) ---
 
@@ -140,8 +141,8 @@ export class PipeManager {
     const capHeight = 0.3;
     const halfGap = gapSize / 2;
 
-    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x2ecc40, roughness: 0.6 });
-    const capMat = new THREE.MeshStandardMaterial({ color: 0x27ae36, roughness: 0.5 });
+    const pipeMat = new ToonMaterial(0x2ecc40);
+    const capMat = new ToonMaterial(0x27ae36);
 
     // Bottom pipe
     const bottomHeight = pipe.gapY - halfGap;
@@ -221,7 +222,7 @@ export class PipeManager {
         if (mesh) {
           mesh.traverse((child) => {
             if (child instanceof THREE.Mesh) {
-              (child.material as THREE.MeshStandardMaterial).color.set(0xff3333);
+              (child.material as ToonMaterial).setColor(0xff3333);
             }
           });
         }

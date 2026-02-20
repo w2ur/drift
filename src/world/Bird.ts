@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { ToonMaterial } from "../shaders/ToonMaterial";
 
 const GRAVITY = -16;
 const FLAP_FORCE = 7;
@@ -64,18 +65,14 @@ export class Bird {
   private buildMesh(): void {
     // Body — golden sphere
     const bodyGeo = new THREE.SphereGeometry(BIRD_RADIUS, 16, 12);
-    const bodyMat = new THREE.MeshStandardMaterial({
-      color: 0xffd700,
-      roughness: 0.4,
-      metalness: 0.1,
-    });
+    const bodyMat = new ToonMaterial(0xffd700);
     this.body = new THREE.Mesh(bodyGeo, bodyMat);
     this.body.castShadow = true;
     this.group.add(this.body);
 
     // Eyes — white spheres
     const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    const eyeMat = new ToonMaterial(0xffffff);
     const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
     eyeL.position.set(-0.15, 0.1, -0.32);
     this.group.add(eyeL);
@@ -86,7 +83,7 @@ export class Bird {
 
     // Pupils — black spheres
     const pupilGeo = new THREE.SphereGeometry(0.04, 8, 8);
-    const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    const pupilMat = new ToonMaterial(0x111111);
     const pupilL = new THREE.Mesh(pupilGeo, pupilMat);
     pupilL.position.set(-0.15, 0.1, -0.38);
     this.group.add(pupilL);
@@ -97,7 +94,7 @@ export class Bird {
 
     // Beak — orange cone
     const beakGeo = new THREE.ConeGeometry(0.08, 0.2, 8);
-    const beakMat = new THREE.MeshStandardMaterial({ color: 0xff8c00 });
+    const beakMat = new ToonMaterial(0xff8c00);
     const beak = new THREE.Mesh(beakGeo, beakMat);
     beak.rotation.x = -Math.PI / 2;
     beak.position.set(0, 0, -0.45);
@@ -105,7 +102,7 @@ export class Bird {
 
     // Wings — orange boxes
     const wingGeo = new THREE.BoxGeometry(0.35, 0.06, 0.2);
-    const wingMat = new THREE.MeshStandardMaterial({ color: 0xffa500 });
+    const wingMat = new ToonMaterial(0xffa500);
 
     this.wingL = new THREE.Mesh(wingGeo, wingMat);
     this.wingL.position.set(-0.38, 0, 0);
@@ -119,7 +116,7 @@ export class Bird {
 
     // Tail — orange box
     const tailGeo = new THREE.BoxGeometry(0.15, 0.08, 0.12);
-    const tailMat = new THREE.MeshStandardMaterial({ color: 0xffa500 });
+    const tailMat = new ToonMaterial(0xffa500);
     const tail = new THREE.Mesh(tailGeo, tailMat);
     tail.position.set(0, 0, 0.35);
     this.group.add(tail);
