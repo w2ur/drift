@@ -1,9 +1,11 @@
 import { StateMachine } from "./StateMachine";
 import { Clock } from "./Clock";
+import { InputManager } from "./InputManager";
 
 export class GameEngine {
   readonly state = new StateMachine();
   readonly clock = new Clock();
+  readonly input = new InputManager();
   private animationId = 0;
   private lastTime = 0;
   private running = false;
@@ -12,6 +14,9 @@ export class GameEngine {
     if (this.running) return;
     this.running = true;
     this.lastTime = performance.now();
+    this.input.bind();
+    this.input.on("flap", () => this.handleFlap());
+    this.input.on("restart", () => this.handleRestart());
     this.loop();
   }
 
@@ -32,5 +37,17 @@ export class GameEngine {
 
   private update(_delta: number): void {
     // Will be filled in by subsequent tasks
+  }
+
+  private handleFlap(): void {
+    if (this.state.phase === "ready") {
+      this.state.transition("playing");
+    }
+  }
+
+  private handleRestart(): void {
+    if (this.state.phase === "ended") {
+      this.state.reset();
+    }
   }
 }
