@@ -88,6 +88,14 @@ export class GameEngine {
 
     this.audio = new AudioManager();
 
+    // Set initial biome on pipe manager
+    const initialPalette = this.biomeManager.getCurrentPalette();
+    this.pipeManager.setBiome(
+      this.biomeManager.currentBiome.name,
+      initialPalette.pipeMain,
+      initialPalette.pipeCap
+    );
+
     this.lastTime = performance.now();
     this.input.bind();
     this.input.on("flap", () => this.handleFlap());
@@ -208,6 +216,12 @@ export class GameEngine {
         if (this.biomeManager.biomeIndex !== prevBiomeIndex) {
           this.hazards.setActiveBiome(this.biomeManager.currentBiome.hazard);
           this.audio.startBiomeMusic(this.biomeManager.currentBiome.name);
+          const biomePalette = this.biomeManager.getCurrentPalette();
+          this.pipeManager.setBiome(
+            this.biomeManager.currentBiome.name,
+            biomePalette.pipeMain,
+            biomePalette.pipeCap
+          );
         }
 
         const palette = this.biomeManager.getCurrentPalette();
@@ -449,6 +463,11 @@ export class GameEngine {
       this.bird.physics.radius = 0.4;
       this.cameraController.setBossMode(false);
       const defaultPalette = this.biomeManager.getCurrentPalette();
+      this.pipeManager.setBiome(
+        this.biomeManager.currentBiome.name,
+        defaultPalette.pipeMain,
+        defaultPalette.pipeCap
+      );
       this.environment.setSkyColor(defaultPalette.sky);
       this.environment.setGroundColor(defaultPalette.ground);
       const fog = this.renderer.scene.fog as THREE.Fog;

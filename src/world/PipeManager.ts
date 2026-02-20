@@ -98,12 +98,390 @@ export interface PipeUpdateResult {
   nearMissPipes: Pipe[];
 }
 
+// Biome-specific pipe builder functions
+
+function buildMeadowPipeMesh(
+  group: THREE.Group,
+  pipeMainColor: THREE.Color,
+  pipeCapColor: THREE.Color,
+  bottomHeight: number,
+  topStart: number,
+  topHeight: number,
+  capHeight: number
+): void {
+  const radius = 1.0;
+  const capRadius = 1.2;
+  const pipeMat = new ToonMaterial(pipeMainColor);
+  const capMat = new ToonMaterial(pipeCapColor);
+
+  const flowerColors = [0xff69b4, 0xffff00, 0xff4444];
+
+  if (bottomHeight > 0) {
+    // Tapered wooden post
+    const bottomGeo = new THREE.CylinderGeometry(radius * 0.9, radius, bottomHeight, 16);
+    const bottom = new THREE.Mesh(bottomGeo, pipeMat);
+    bottom.position.y = bottomHeight / 2;
+    bottom.castShadow = true;
+    group.add(bottom);
+
+    const bottomCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 16);
+    const bottomCap = new THREE.Mesh(bottomCapGeo, capMat);
+    bottomCap.position.y = bottomHeight;
+    bottomCap.castShadow = true;
+    group.add(bottomCap);
+
+    // Flower decorations on cap
+    for (let i = 0; i < 3; i++) {
+      const angle = (i / 3) * Math.PI * 2;
+      const flowerMat = new ToonMaterial(flowerColors[i]);
+      const flowerGeo = new THREE.SphereGeometry(0.1, 6, 6);
+      const flower = new THREE.Mesh(flowerGeo, flowerMat);
+      flower.position.set(
+        Math.cos(angle) * 0.7,
+        bottomHeight + capHeight / 2 + 0.1,
+        Math.sin(angle) * 0.7
+      );
+      group.add(flower);
+    }
+  }
+
+  if (topHeight > 0) {
+    const topGeo = new THREE.CylinderGeometry(radius * 0.9, radius, topHeight, 16);
+    const top = new THREE.Mesh(topGeo, pipeMat);
+    top.position.y = topStart + topHeight / 2;
+    top.castShadow = true;
+    group.add(top);
+
+    const topCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 16);
+    const topCap = new THREE.Mesh(topCapGeo, capMat);
+    topCap.position.y = topStart;
+    topCap.castShadow = true;
+    group.add(topCap);
+
+    // Flower decorations on cap
+    for (let i = 0; i < 3; i++) {
+      const angle = (i / 3) * Math.PI * 2;
+      const flowerMat = new ToonMaterial(flowerColors[i]);
+      const flowerGeo = new THREE.SphereGeometry(0.1, 6, 6);
+      const flower = new THREE.Mesh(flowerGeo, flowerMat);
+      flower.position.set(
+        Math.cos(angle) * 0.7,
+        topStart - capHeight / 2 - 0.1,
+        Math.sin(angle) * 0.7
+      );
+      group.add(flower);
+    }
+  }
+}
+
+function buildSunsetCanyonPipeMesh(
+  group: THREE.Group,
+  pipeMainColor: THREE.Color,
+  pipeCapColor: THREE.Color,
+  bottomHeight: number,
+  topStart: number,
+  topHeight: number,
+  capHeight: number
+): void {
+  const capRadius = 1.2;
+  const pipeMat = new ToonMaterial(pipeMainColor);
+  const capMat = new ToonMaterial(pipeCapColor);
+
+  if (bottomHeight > 0) {
+    // 8-sided rock pillar with wider base
+    const bottomGeo = new THREE.CylinderGeometry(0.9, 1.1, bottomHeight, 8);
+    const bottom = new THREE.Mesh(bottomGeo, pipeMat);
+    bottom.position.y = bottomHeight / 2;
+    bottom.castShadow = true;
+    group.add(bottom);
+
+    const bottomCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 8);
+    const bottomCap = new THREE.Mesh(bottomCapGeo, capMat);
+    bottomCap.position.y = bottomHeight;
+    bottomCap.castShadow = true;
+    group.add(bottomCap);
+  }
+
+  if (topHeight > 0) {
+    const topGeo = new THREE.CylinderGeometry(0.9, 1.1, topHeight, 8);
+    const top = new THREE.Mesh(topGeo, pipeMat);
+    top.position.y = topStart + topHeight / 2;
+    top.castShadow = true;
+    group.add(top);
+
+    const topCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 8);
+    const topCap = new THREE.Mesh(topCapGeo, capMat);
+    topCap.position.y = topStart;
+    topCap.castShadow = true;
+    group.add(topCap);
+  }
+}
+
+function buildStormSeaPipeMesh(
+  group: THREE.Group,
+  pipeMainColor: THREE.Color,
+  pipeCapColor: THREE.Color,
+  bottomHeight: number,
+  topStart: number,
+  topHeight: number
+): void {
+  const radius = 1.0;
+  const capRadius = 1.2;
+  const capHeight = 0.2;
+  const pipeMat = new ToonMaterial(pipeMainColor);
+  pipeMat.uniforms.ambientStrength = { value: 0.35 };
+  const capMat = new ToonMaterial(pipeCapColor);
+  const rivetMat = new ToonMaterial(0x999999);
+
+  const rivetCount = 5;
+
+  if (bottomHeight > 0) {
+    const bottomGeo = new THREE.CylinderGeometry(radius, radius, bottomHeight, 16);
+    const bottom = new THREE.Mesh(bottomGeo, pipeMat);
+    bottom.position.y = bottomHeight / 2;
+    bottom.castShadow = true;
+    group.add(bottom);
+
+    const bottomCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 16);
+    const bottomCap = new THREE.Mesh(bottomCapGeo, capMat);
+    bottomCap.position.y = bottomHeight;
+    bottomCap.castShadow = true;
+    group.add(bottomCap);
+
+    // Rivets around the pipe body
+    for (let i = 0; i < rivetCount; i++) {
+      const angle = (i / rivetCount) * Math.PI * 2;
+      const rivetGeo = new THREE.SphereGeometry(0.06, 5, 5);
+      const rivet = new THREE.Mesh(rivetGeo, rivetMat);
+      rivet.position.set(
+        Math.cos(angle) * (radius + 0.04),
+        bottomHeight * 0.6,
+        Math.sin(angle) * (radius + 0.04)
+      );
+      group.add(rivet);
+    }
+  }
+
+  if (topHeight > 0) {
+    const topGeo = new THREE.CylinderGeometry(radius, radius, topHeight, 16);
+    const top = new THREE.Mesh(topGeo, pipeMat);
+    top.position.y = topStart + topHeight / 2;
+    top.castShadow = true;
+    group.add(top);
+
+    const topCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 16);
+    const topCap = new THREE.Mesh(topCapGeo, capMat);
+    topCap.position.y = topStart;
+    topCap.castShadow = true;
+    group.add(topCap);
+
+    // Rivets around the pipe body
+    for (let i = 0; i < rivetCount; i++) {
+      const angle = (i / rivetCount) * Math.PI * 2;
+      const rivetGeo = new THREE.SphereGeometry(0.06, 5, 5);
+      const rivet = new THREE.Mesh(rivetGeo, rivetMat);
+      rivet.position.set(
+        Math.cos(angle) * (radius + 0.04),
+        topStart + topHeight * 0.4,
+        Math.sin(angle) * (radius + 0.04)
+      );
+      group.add(rivet);
+    }
+  }
+}
+
+function buildNeonCityPipeMesh(
+  group: THREE.Group,
+  _pipeMainColor: THREE.Color,
+  _pipeCapColor: THREE.Color,
+  bottomHeight: number,
+  topStart: number,
+  topHeight: number,
+  capHeight: number
+): void {
+  const radius = 1.0;
+  const capRadius = 1.2;
+  const pipeMat = new ToonMaterial(0x1a1a2e);
+  const capMat = new ToonMaterial(0xff1493);
+  // Neon ring colors
+  const ringColors = [0x00ffff, 0xff1493, 0x00ffff];
+
+  if (bottomHeight > 0) {
+    const bottomGeo = new THREE.CylinderGeometry(radius, radius, bottomHeight, 16);
+    const bottom = new THREE.Mesh(bottomGeo, pipeMat);
+    bottom.position.y = bottomHeight / 2;
+    bottom.castShadow = true;
+    group.add(bottom);
+
+    const bottomCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 16);
+    const bottomCap = new THREE.Mesh(bottomCapGeo, capMat);
+    bottomCap.position.y = bottomHeight;
+    bottomCap.castShadow = true;
+    group.add(bottomCap);
+
+    // Neon rings along the body
+    const ringPositions = [bottomHeight * 0.25, bottomHeight * 0.55, bottomHeight * 0.8];
+    ringPositions.forEach((yPos, idx) => {
+      if (yPos < bottomHeight - 0.2) {
+        const ringGeo = new THREE.TorusGeometry(1.05, 0.03, 8, 24);
+        const ringMat = new ToonMaterial(ringColors[idx % ringColors.length]);
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.y = yPos;
+        ring.rotation.x = Math.PI / 2;
+        group.add(ring);
+      }
+    });
+  }
+
+  if (topHeight > 0) {
+    const topGeo = new THREE.CylinderGeometry(radius, radius, topHeight, 16);
+    const top = new THREE.Mesh(topGeo, pipeMat);
+    top.position.y = topStart + topHeight / 2;
+    top.castShadow = true;
+    group.add(top);
+
+    const topCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 16);
+    const topCap = new THREE.Mesh(topCapGeo, capMat);
+    topCap.position.y = topStart;
+    topCap.castShadow = true;
+    group.add(topCap);
+
+    // Neon rings along the body
+    const ringPositions = [
+      topStart + topHeight * 0.2,
+      topStart + topHeight * 0.5,
+      topStart + topHeight * 0.75,
+    ];
+    ringPositions.forEach((yPos, idx) => {
+      if (yPos < topStart + topHeight - 0.2) {
+        const ringGeo = new THREE.TorusGeometry(1.05, 0.03, 8, 24);
+        const ringMat = new ToonMaterial(ringColors[idx % ringColors.length]);
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.y = yPos;
+        ring.rotation.x = Math.PI / 2;
+        group.add(ring);
+      }
+    });
+  }
+}
+
+function buildSkyTemplePipeMesh(
+  group: THREE.Group,
+  pipeMainColor: THREE.Color,
+  pipeCapColor: THREE.Color,
+  bottomHeight: number,
+  topStart: number,
+  topHeight: number,
+  capHeight: number
+): void {
+  const radius = 1.0;
+  const capRadius = 1.3;
+  const pipeMat = new ToonMaterial(pipeMainColor);
+  const capMat = new ToonMaterial(pipeCapColor);
+  const goldMat = new ToonMaterial(0xffd700);
+
+  if (bottomHeight > 0) {
+    // Smooth marble column with higher segment count
+    const bottomGeo = new THREE.CylinderGeometry(radius, radius, bottomHeight, 24);
+    const bottom = new THREE.Mesh(bottomGeo, pipeMat);
+    bottom.position.y = bottomHeight / 2;
+    bottom.castShadow = true;
+    group.add(bottom);
+
+    const bottomCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 24);
+    const bottomCap = new THREE.Mesh(bottomCapGeo, capMat);
+    bottomCap.position.y = bottomHeight;
+    bottomCap.castShadow = true;
+    group.add(bottomCap);
+
+    // Gold ring at cap
+    const goldRingGeo = new THREE.TorusGeometry(1.15, 0.04, 8, 24);
+    const goldRing = new THREE.Mesh(goldRingGeo, goldMat);
+    goldRing.position.y = bottomHeight;
+    goldRing.rotation.x = Math.PI / 2;
+    group.add(goldRing);
+  }
+
+  if (topHeight > 0) {
+    const topGeo = new THREE.CylinderGeometry(radius, radius, topHeight, 24);
+    const top = new THREE.Mesh(topGeo, pipeMat);
+    top.position.y = topStart + topHeight / 2;
+    top.castShadow = true;
+    group.add(top);
+
+    const topCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 24);
+    const topCap = new THREE.Mesh(topCapGeo, capMat);
+    topCap.position.y = topStart;
+    topCap.castShadow = true;
+    group.add(topCap);
+
+    // Gold ring at cap
+    const goldRingGeo = new THREE.TorusGeometry(1.15, 0.04, 8, 24);
+    const goldRing = new THREE.Mesh(goldRingGeo, goldMat);
+    goldRing.position.y = topStart;
+    goldRing.rotation.x = Math.PI / 2;
+    group.add(goldRing);
+  }
+}
+
+function buildDefaultPipeMesh(
+  group: THREE.Group,
+  pipeMainColor: THREE.Color,
+  pipeCapColor: THREE.Color,
+  bottomHeight: number,
+  topStart: number,
+  topHeight: number,
+  capHeight: number
+): void {
+  const radius = 1.0;
+  const capRadius = 1.2;
+  const pipeMat = new ToonMaterial(pipeMainColor);
+  const capMat = new ToonMaterial(pipeCapColor);
+
+  if (bottomHeight > 0) {
+    const bottomGeo = new THREE.CylinderGeometry(radius, radius, bottomHeight, 16);
+    const bottom = new THREE.Mesh(bottomGeo, pipeMat);
+    bottom.position.y = bottomHeight / 2;
+    bottom.castShadow = true;
+    group.add(bottom);
+
+    const bottomCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 16);
+    const bottomCap = new THREE.Mesh(bottomCapGeo, capMat);
+    bottomCap.position.y = bottomHeight;
+    bottomCap.castShadow = true;
+    group.add(bottomCap);
+  }
+
+  if (topHeight > 0) {
+    const topGeo = new THREE.CylinderGeometry(radius, radius, topHeight, 16);
+    const top = new THREE.Mesh(topGeo, pipeMat);
+    top.position.y = topStart + topHeight / 2;
+    top.castShadow = true;
+    group.add(top);
+
+    const topCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 16);
+    const topCap = new THREE.Mesh(topCapGeo, capMat);
+    topCap.position.y = topStart;
+    topCap.castShadow = true;
+    group.add(topCap);
+  }
+}
+
 export class PipeManager {
   readonly group = new THREE.Group();
   pipes: Pipe[] = [];
   private nextId = 0;
   private pipeHeight = 12;
   private meshes = new Map<number, THREE.Group>();
+  private biomeName = "Meadow";
+  private pipeMainColor = new THREE.Color(0x8b4513);
+  private pipeCapColor = new THREE.Color(0x654321);
+
+  setBiome(biomeName: string, pipeMainColor: THREE.Color, pipeCapColor: THREE.Color): void {
+    this.biomeName = biomeName;
+    this.pipeMainColor = pipeMainColor.clone();
+    this.pipeCapColor = pipeCapColor.clone();
+  }
 
   spawn(count: number, startZ: number, score: number): void {
     const diff = getDifficulty(score);
@@ -136,45 +514,78 @@ export class PipeManager {
 
   private addPipeMesh(pipe: Pipe, gapSize: number): void {
     const pipeGroup = new THREE.Group();
-    const radius = 1.0;
-    const capRadius = 1.2;
     const capHeight = 0.3;
     const halfGap = gapSize / 2;
 
-    const pipeMat = new ToonMaterial(0x2ecc40);
-    const capMat = new ToonMaterial(0x27ae36);
-
-    // Bottom pipe
     const bottomHeight = pipe.gapY - halfGap;
-    if (bottomHeight > 0) {
-      const bottomGeo = new THREE.CylinderGeometry(radius, radius, bottomHeight, 16);
-      const bottom = new THREE.Mesh(bottomGeo, pipeMat);
-      bottom.position.y = bottomHeight / 2;
-      bottom.castShadow = true;
-      pipeGroup.add(bottom);
-
-      const bottomCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 16);
-      const bottomCap = new THREE.Mesh(bottomCapGeo, capMat);
-      bottomCap.position.y = bottomHeight;
-      bottomCap.castShadow = true;
-      pipeGroup.add(bottomCap);
-    }
-
-    // Top pipe
     const topStart = pipe.gapY + halfGap;
     const topHeight = this.pipeHeight - topStart;
-    if (topHeight > 0) {
-      const topGeo = new THREE.CylinderGeometry(radius, radius, topHeight, 16);
-      const top = new THREE.Mesh(topGeo, pipeMat);
-      top.position.y = topStart + topHeight / 2;
-      top.castShadow = true;
-      pipeGroup.add(top);
 
-      const topCapGeo = new THREE.CylinderGeometry(capRadius, capRadius, capHeight, 16);
-      const topCap = new THREE.Mesh(topCapGeo, capMat);
-      topCap.position.y = topStart;
-      topCap.castShadow = true;
-      pipeGroup.add(topCap);
+    switch (this.biomeName) {
+      case "Meadow":
+        buildMeadowPipeMesh(
+          pipeGroup,
+          this.pipeMainColor,
+          this.pipeCapColor,
+          bottomHeight,
+          topStart,
+          topHeight,
+          capHeight
+        );
+        break;
+      case "Sunset Canyon":
+        buildSunsetCanyonPipeMesh(
+          pipeGroup,
+          this.pipeMainColor,
+          this.pipeCapColor,
+          bottomHeight,
+          topStart,
+          topHeight,
+          capHeight
+        );
+        break;
+      case "Storm Sea":
+        buildStormSeaPipeMesh(
+          pipeGroup,
+          this.pipeMainColor,
+          this.pipeCapColor,
+          bottomHeight,
+          topStart,
+          topHeight
+        );
+        break;
+      case "Neon City":
+        buildNeonCityPipeMesh(
+          pipeGroup,
+          this.pipeMainColor,
+          this.pipeCapColor,
+          bottomHeight,
+          topStart,
+          topHeight,
+          capHeight
+        );
+        break;
+      case "Sky Temple":
+        buildSkyTemplePipeMesh(
+          pipeGroup,
+          this.pipeMainColor,
+          this.pipeCapColor,
+          bottomHeight,
+          topStart,
+          topHeight,
+          capHeight
+        );
+        break;
+      default:
+        buildDefaultPipeMesh(
+          pipeGroup,
+          this.pipeMainColor,
+          this.pipeCapColor,
+          bottomHeight,
+          topStart,
+          topHeight,
+          capHeight
+        );
     }
 
     pipeGroup.position.set(pipe.x, 0, pipe.z);
