@@ -25,6 +25,10 @@ export class CameraController {
   private lookAheadZ = -10;
   private lookY = 0.2;
 
+  // Zoom pulse for near-miss feedback
+  private zoomOffset = 0;
+  private targetZoomOffset = 0;
+
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
   }
@@ -39,7 +43,10 @@ export class CameraController {
   ): void {
     const lerpSpeed = isDying ? 0.03 : 0.12;
 
-    const behindZ = birdZ + this.behindDist;
+    // Zoom pulse spring
+    this.zoomOffset += (this.targetZoomOffset - this.zoomOffset) * 0.1;
+
+    const behindZ = birdZ + (this.behindDist - this.zoomOffset);
     const behindX = getPathX(behindZ);
 
     const targetPos = new THREE.Vector3(
@@ -88,6 +95,11 @@ export class CameraController {
 
   microBounce(): void {
     this.punchOffset.set(0, 0.02, 0);
+  }
+
+  zoomPulse(): void {
+    this.zoomOffset = 1;
+    this.targetZoomOffset = 0;
   }
 
   private updateShake(delta: number, elapsed: number): void {

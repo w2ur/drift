@@ -174,6 +174,23 @@ export class UIManager {
     }, 800);
   }
 
+  flashEdges(): void {
+    const flash = document.createElement("div");
+    flash.style.cssText = `
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 25;
+      box-shadow: inset 0 0 60px rgba(255,255,255,0.3);
+      opacity: 0.3; transition: opacity 0.2s ease-out;
+    `;
+    this.container.appendChild(flash);
+    requestAnimationFrame(() => {
+      flash.style.opacity = "0";
+    });
+    setTimeout(() => {
+      this.container.removeChild(flash);
+    }, 200);
+  }
+
   getMuted(): boolean {
     return this.isMuted;
   }

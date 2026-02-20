@@ -28,6 +28,7 @@ export class GameEngine {
   private running = false;
   private dyingCaIntensity = 0;
   private trailTimer = 0;
+  private bulletTimeTimer = 0;
 
   start(): void {
     if (this.running) return;
@@ -87,6 +88,14 @@ export class GameEngine {
       this.bird.physics.z
     );
 
+    // Bullet-time countdown using real (unscaled) delta
+    if (this.bulletTimeTimer > 0) {
+      this.bulletTimeTimer -= this.clock.delta;
+      if (this.bulletTimeTimer <= 0) {
+        this.clock.timeScale = 1.0;
+      }
+    }
+
     if (phase === "playing") {
       const difficulty = getDifficulty(this.scoreManager.score);
       const currentSpeed = difficulty.speed;
@@ -120,9 +129,13 @@ export class GameEngine {
         this.ui.updateScore(this.scoreManager.score);
       }
       if (pipeResult.nearMissPipes.length > 0) {
+        this.clock.timeScale = 0.3;
+        this.bulletTimeTimer = 0.2;
         this.scoreManager.registerNearMiss();
         this.ui.showCombo(this.scoreManager.combo);
         this.particles.emitNearMissSparks(birdPos);
+        this.ui.flashEdges();
+        this.cameraController.zoomPulse();
       }
 
       // Periodic bird trail
