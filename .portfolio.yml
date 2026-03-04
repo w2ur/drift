@@ -1,0 +1,29 @@
+name: "Birdie"
+slug: birdie
+tagline: "Flappy Bird sous stéroïdes, en 3D, avec des shaders faits main."
+description: "Jeu 3D avec cel-shading, 5 biomes, boss fights et leaderboard arcade. Construit from scratch avec Three.js, audio synthétisé, zéro asset externe."
+
+audience: public
+visibility: public
+status: prototype
+
+url: null
+domain: null
+deploy: local
+
+portfolio_card: true
+portfolio_link: false
+badge: null
+
+icon_emoji: "🐦"
+icon_file: null
+
+stack:
+  - Three.js
+  - TypeScript
+  - Vite
+  - GLSL
+  - Web Audio
+
+repo_public: false
+license: null
