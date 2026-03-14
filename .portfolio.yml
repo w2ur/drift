@@ -14,7 +14,7 @@ deploy: local
 portfolio_card: true
 portfolio_link: false
 badge: null
-sort_order: 12
+sort_order: 13
 
 icon_emoji: "🐦"
 icon_file: null
