@@ -1,7 +1,7 @@
-name: "Birdie"
+name: "Drift"
 slug: birdie
-tagline: "Flappy Bird sous stéroïdes, en 3D, avec des shaders faits main."
-description: "Jeu 3D avec cel-shading, 5 biomes, boss fights et leaderboard arcade. Construit from scratch avec Three.js, audio synthétisé, zéro asset externe."
+tagline: "A raymarched 3D game in one HTML file. Zero dependencies. Under 200 lines."
+description: "Flappy Bird's tap-to-fly mechanic, reimagined as a glowing orb drifting through a raymarched void. Single file, no build step, no libraries."
 
 audience: public
 visibility: public
@@ -16,15 +16,14 @@ portfolio_link: false
 badge: null
 sort_order: 13
 
-icon_emoji: "🐦"
+icon_emoji: "✦"
 icon_file: null
 
 stack:
-  - Three.js
-  - TypeScript
-  - Vite
+  - WebGL2
   - GLSL
   - Web Audio
+  - JavaScript
 
 repo_public: false
 license: null

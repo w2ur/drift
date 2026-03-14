@@ -1,14 +1,6 @@
-node_modules
-dist
 .DS_Store
 .env*
 *.tar.gz
-
-# Plans (working artifacts, not code)
 docs/plans/
-
-# Plans (working artifacts, not code)
 docs/superpowers/
-
-# Plans (working artifacts, not code)
 .superpowers/
