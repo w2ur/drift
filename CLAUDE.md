@@ -36,7 +36,13 @@ Manual playtesting. Open the file, play the game. Key things to verify:
 
 ## Deployment
 
-Static file. Place `drift.html` on any static host.
+Served at `william.revah.paris/drift`. When `drift.html` is modified, copy it to the portfolio repo:
+
+```bash
+cp drift.html ../william-revah-paris/drift.html
+```
+
+Then commit in both repos. This sync is mandatory — never commit a `drift.html` change here without also updating the portfolio copy.
 
 ## Project-Specific Rules
 

@@ -1,6 +1,7 @@
 .DS_Store
 .env*
 *.tar.gz
+sync.sh
 docs/plans/
 docs/superpowers/
 .superpowers/
