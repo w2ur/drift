@@ -1,6 +1,6 @@
 name: "Drift"
 slug: birdie
-tagline: "A raymarched 3D game in one HTML file. Zero dependencies. Under 200 lines."
+tagline: "One file. One input. One more try."
 description: "Flappy Bird's tap-to-fly mechanic, reimagined as a glowing orb drifting through a raymarched void. Single file, no build step, no libraries."
 
 audience: public
