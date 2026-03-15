@@ -42,9 +42,8 @@ vec3 march(vec3 ro,vec3 rd){float t=0.,mO=1e9,mP=1e9;
   vec3 orbPos=vec3(0.,uBirdY,uScroll);
   for(int i=0;i<80;i++){vec3 p=ro+rd*t;
     float dO=sdSphere(p-orbPos,.3);
-    float dT=sdSphere((p-orbPos-vec3(0,0,.8))*vec3(1,1,.35),.25);
-    float dP=pillars(p);float d=min(min(dO,dP),dT);
-    mO=min(mO,min(dO,dT));mP=min(mP,dP);
+    float dP=pillars(p);float d=min(dO,dP);
+    mO=min(mO,dO);mP=min(mP,dP);
     if(d<.001||t>50.)break;t+=d;}return vec3(t,mO,mP);}
 
 void main(){
@@ -53,7 +52,7 @@ void main(){
   vec3 col=mix(vec3(.024,.039,.031),vec3(.055,.078,.063),vUv.y);
   col+=.012*exp(-3.*length(vUv-.5));
   // Camera behind orb, slightly above
-  vec3 ro=vec3(1.5,uBirdY*.3+1.8,uScroll-7.),rd=normalize(vec3(uv.x-.08,uv.y-.12,1.2));
+  vec3 ro=vec3(0.,uBirdY*.4+2.5,uScroll-8.),rd=normalize(vec3(uv.x,uv.y-.18,1.));
   vec3 h=march(ro,rd);float fog=exp(-.04*h.x);
   // Pillar glow + surface
   col+=vec3(.12,.35,.2)*.01/(h.z*h.z+.005)*fog;
