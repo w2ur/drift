@@ -33,33 +33,32 @@ float sdSphere(vec3 p,float r){return length(p)-r;}
 float sdBox(vec3 p,vec3 b,float r){vec3 q=abs(p)-b+r;return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.)-r;}
 
 float pillars(vec3 p){float d=1e9;
-  for(int i=0;i<8;i++){float px=uP[i].x-uScroll,gy=uP[i].y,gs=uP[i].z;
-    float pz=float(i)*.35-1.2;
-    d=min(d,sdBox(p-vec3(px,gy+gs*.5+5.,pz),vec3(.4,5.,.4),.1));
-    d=min(d,sdBox(p-vec3(px,gy-gs*.5-5.,pz),vec3(.4,5.,.4),.1));}return d;}
+  for(int i=0;i<8;i++){float pz=uP[i].x,gy=uP[i].y,gs=uP[i].z;
+    d=min(d,sdBox(p-vec3(0,gy+gs*.5+5.,pz),vec3(4.,5.,.4),.12));
+    d=min(d,sdBox(p-vec3(0,gy-gs*.5-5.,pz),vec3(4.,5.,.4),.12));}return d;}
 
-vec3 march(vec3 ro,vec3 rd){float t=0.,mO=1e9,mP=1e9,mT=1e9;
-  vec3 orbPos=vec3(-3.,uBirdY,0.);
-  for(int i=0;i<64;i++){vec3 p=ro+rd*t;
+vec3 march(vec3 ro,vec3 rd){float t=0.,mO=1e9,mP=1e9;
+  vec3 orbPos=vec3(0.,uBirdY,uScroll);
+  for(int i=0;i<80;i++){vec3 p=ro+rd*t;
     float dO=sdSphere(p-orbPos,.3);
-    float dT=sdSphere((p-orbPos+vec3(.6,0,0))*vec3(.4,1,1),.2);
+    float dT=sdSphere((p-orbPos-vec3(0,0,.8))*vec3(1,1,.35),.25);
     float dP=pillars(p);float d=min(min(dO,dP),dT);
-    mO=min(mO,dO);mP=min(mP,dP);mT=min(mT,dT);
-    if(d<.001||t>30.)break;t+=d;}return vec3(t,mO,mP);}
+    mO=min(mO,min(dO,dT));mP=min(mP,dP);
+    if(d<.001||t>50.)break;t+=d;}return vec3(t,mO,mP);}
 
 void main(){
   vec2 uv=(gl_FragCoord.xy-.5*uR)/uR.y;
   // Void gradient
   vec3 col=mix(vec3(.024,.039,.031),vec3(.055,.078,.063),vUv.y);
   col+=.012*exp(-3.*length(vUv-.5));
-  // Raymarch
-  vec3 ro=vec3(0,2.,-10),rd=normalize(vec3(uv.x,uv.y-.2,1.2));
-  vec3 h=march(ro,rd);float fog=exp(-.06*h.x);
+  // Camera behind orb, slightly above
+  vec3 ro=vec3(0.,uBirdY*.3+1.8,uScroll-7.),rd=normalize(vec3(uv.x,uv.y-.12,1.2));
+  vec3 h=march(ro,rd);float fog=exp(-.04*h.x);
   // Pillar glow + surface
-  col+=vec3(.12,.35,.2)*.008/(h.z*h.z+.005)*fog;
+  col+=vec3(.12,.35,.2)*.01/(h.z*h.z+.005)*fog;
   if(h.z<.001)col=vec3(.1,.3,.15)*fog;
-  // Orb glow + surface + trail
-  col+=vec3(1.,.88,.65)*.015/(h.y*h.y+.01)*fog;
+  // Orb glow + surface
+  col+=vec3(1.,.88,.65)*.02/(h.y*h.y+.01)*fog;
   if(h.y<.001)col=vec3(1.,.9,.7);
   // Death flash
   col=mix(col,vec3(1.),uFlash*.6);
@@ -82,10 +81,10 @@ const uFlash=gl.getUniformLocation(prog,'uFlash'),uP=gl.getUniformLocation(prog,
 // --- Game state ---
 let state='ready',birdY=0,velY=0,scroll=0,score=0,elapsed=0,flash=0;
 let best=+localStorage.getItem('drift-best')||0;
-const P=Array.from({length:8},(_,i)=>[i*5,(Math.random()-.5)*3,2.6]);
+const P=Array.from({length:8},(_,i)=>[i*7,(Math.random()-.5)*3,2.6]);
 
 function reset(){state='ready';birdY=0;velY=0;scroll=0;score=0;elapsed=0;flash=0;
-  P.forEach((p,i)=>{p[0]=i*5;p[1]=(Math.random()-.5)*3;p[2]=2.6;});}
+  P.forEach((p,i)=>{p[0]=i*7;p[1]=(Math.random()-.5)*3;p[2]=2.6;});}
 
 function die(){state='dead';flash=1;
   if(score>best){best=score;localStorage.setItem('drift-best',best);}playDeath();}
@@ -135,14 +134,14 @@ addEventListener('resize',resize);resize();
     velY-=20*dt;birdY+=velY*dt;
     const speed=4.5*(1+elapsed*.004);scroll+=speed*dt;elapsed+=dt;
     score=Math.floor(scroll);
-    // Collision
-    for(const p of P){const dx=p[0]-scroll+3;
-      if(Math.abs(dx)<.7){if(Math.abs(birdY-p[1])+.3>p[2]*.5){die();break;}}}
+    // Collision — orb at Z=scroll, pillars at Z=p[0]
+    for(const p of P){const dz=Math.abs(p[0]-scroll);
+      if(dz<.7){if(Math.abs(birdY-p[1])+.3>p[2]*.5){die();break;}}}
     if(birdY<-5||birdY>5)die();
-    // Recycle pillars
-    for(const p of P){if(p[0]-scroll<-10){
+    // Recycle pillars behind camera
+    for(const p of P){if(p[0]<scroll-5){
       let mx=0;for(const q of P)if(q[0]>mx)mx=q[0];
-      p[0]=mx+5;p[1]=(Math.random()-.5)*3;p[2]=Math.max(1.8,2.6-elapsed*.012);}}
+      p[0]=mx+7;p[1]=(Math.random()-.5)*3;p[2]=Math.max(1.8,2.6-elapsed*.012);}}
     // Tension audio
     if(actx)tensionGain.gain.value=Math.min(elapsed/90,1)*.08;
   }
