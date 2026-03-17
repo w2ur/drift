@@ -1,5 +1,5 @@
 name: "Drift"
-slug: birdie
+slug: drift
 tagline: "One file. One input. One more try."
 description: "Flappy Bird's tap-to-fly mechanic, reimagined as a glowing orb drifting through a raymarched void. Single file, no build step, no libraries."
 
