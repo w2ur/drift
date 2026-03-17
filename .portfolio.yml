@@ -5,14 +5,14 @@ description: "Flappy Bird's tap-to-fly mechanic, reimagined as a glowing orb dri
 
 audience: public
 visibility: public
-status: prototype
+status: production
 
-url: null
-domain: null
-deploy: local
+url: https://william.revah.paris/drift
+domain: william.revah.paris/drift
+deploy: netlify
 
 portfolio_card: true
-portfolio_link: false
+portfolio_link: true
 badge: null
 sort_order: 13
 
