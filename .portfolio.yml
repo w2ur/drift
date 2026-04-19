@@ -6,6 +6,8 @@ description: "Flappy Bird's tap-to-fly mechanic, reimagined as a glowing orb dri
 audience: public
 visibility: public
 status: production
+surface_type: internal-story
+story_slug: drift
 
 url: https://william.revah.paris/drift
 domain: william.revah.paris/drift
