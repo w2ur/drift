@@ -1,3 +1,8 @@
+---
+name: "Drift"
+tagline_en: "One file. One input. One more try."
+---
+
 # Drift
 
 A raymarched 3D game in a single HTML file. Zero dependencies. Under 200 lines.
