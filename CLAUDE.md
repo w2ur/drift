@@ -36,13 +36,17 @@ Manual playtesting. Open the file, play the game. Key things to verify:
 
 ## Deployment
 
-Served at `william.revah.paris/drift`. When `drift.html` is modified, copy it to the portfolio repo:
+Served at `william.revah.paris/drift.html` (also reachable as `/drift`). When `drift.html` is modified, copy it to the portfolio repo:
 
 ```bash
-cp drift.html ../william-revah-paris/drift.html
+cp drift.html ../william-revah-paris/public/drift.html
 ```
 
+Note the `public/` segment — the hub is an Astro site and only `public/` is served. `sync.sh` does this and refuses to run if the destination directory is missing, but `sync.sh` is gitignored, so a fresh clone has only this instruction to go on.
+
 Then commit in both repos. This sync is mandatory — never commit a `drift.html` change here without also updating the portfolio copy.
+
+The hub's copy carries one extra line the source does not: `<link rel="icon" href="/favicon.svg">`, which only resolves on the hub. Reconcile around it rather than overwriting it away.
 
 ## Project-Specific Rules
 
