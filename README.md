@@ -3,6 +3,8 @@ name: "Drift"
 tagline_en: "One file. One input. One more try."
 ---
 
+![drift — a glowing orb drifting through pillars in a raymarched void](assets/og.png)
+
 # Drift
 
 A raymarched 3D game in a single HTML file. Zero dependencies. Under 200 lines.
