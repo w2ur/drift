@@ -42,7 +42,7 @@ Served at `william.revah.paris/drift.html` (also reachable as `/drift`). When `d
 cp drift.html ../william-revah-paris/public/drift.html
 ```
 
-Note the `public/` segment — the hub is an Astro site and only `public/` is served. `sync.sh` does this and refuses to run if the destination directory is missing, but `sync.sh` is gitignored, so a fresh clone has only this instruction to go on.
+Note the `public/` segment — the hub is an Astro site and only `public/` is served. `./sync.sh` does exactly this and refuses to run if the destination directory is missing, so it cannot silently copy into a stray path. **It is tracked** — it used to be gitignored, which meant a fresh clone got neither the correct path nor the guard, and the two copies drifted.
 
 Then commit in both repos. This sync is mandatory — never commit a `drift.html` change here without also updating the portfolio copy.
 
