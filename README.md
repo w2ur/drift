@@ -1,6 +1,7 @@
 ---
 name: "Drift"
 tagline_en: "One file. One input. One more try."
+about_en: "One file. One input. One more try. A raymarched 3D game in a single HTML file."
 ---
 
 ![drift — a glowing orb drifting through pillars in a raymarched void](assets/og.png)
