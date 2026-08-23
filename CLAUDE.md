@@ -42,7 +42,7 @@ Served at `william.revah.paris/drift.html` (also reachable as `/drift`). When `d
 cp drift.html ../william-revah-paris/public/drift.html
 ```
 
-Note the `public/` segment — the hub is an Astro site and only `public/` is served. `./sync.sh` does exactly this and refuses to run if the destination directory is missing, so it cannot silently copy into a stray path. **It is tracked** — it used to be gitignored, which meant a fresh clone got neither the correct path nor the guard, and the two copies drifted.
+Note the `public/` segment — the hub is an Astro site and only `public/` is served. `./sync.sh` does exactly this and refuses to run if the destination directory is missing, so it cannot silently copy into a stray path. **`sync.sh` is tracked — do not gitignore it.** An untracked sync script means a fresh clone gets neither the correct path nor the guard, and the two copies drift apart.
 
 Then commit in both repos. This sync is mandatory — never commit a `drift.html` change here without also updating the portfolio copy.
 
@@ -52,5 +52,5 @@ The hub's copy carries one extra line the source does not: `<link rel="icon" hre
 
 - Everything must stay in one file — do not split into multiple files
 - No external dependencies — no npm, no CDN, no libraries
-- Target: under 200 lines total
+- Target: under 200 lines total (`wc -l drift.html` to check the current count)
 - Footer "Made with care by William" on start screen
