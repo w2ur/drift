@@ -46,8 +46,6 @@ Note the `public/` segment — the hub is an Astro site and only `public/` is se
 
 Then commit in both repos. This sync is mandatory — never commit a `drift.html` change here without also updating the portfolio copy.
 
-The hub's copy carries one extra line the source does not: `<link rel="icon" href="/favicon.svg">`, which only resolves on the hub. Reconcile around it rather than overwriting it away.
-
 ## Project-Specific Rules
 
 - Everything must stay in one file — do not split into multiple files
