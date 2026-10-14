@@ -9,14 +9,15 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://william.revah.paris/drift-og.png">
 <style>
-*{margin:0;padding:0}body{overflow:hidden;background:#000}canvas{display:block}
+*{margin:0;padding:0}body{overflow:hidden;background:#000;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
 #ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;font-family:system-ui,sans-serif;color:#fff}
 #title{position:absolute;top:38%;width:100%;text-align:center;font-size:3rem;font-weight:200;letter-spacing:.3em;opacity:1}
 #sub{position:absolute;top:48%;width:100%;text-align:center;font-size:.9rem;font-weight:300;letter-spacing:.15em;opacity:.5;animation:pulse 2s ease-in-out infinite}
 #score{position:absolute;top:6%;right:6%;font-size:2rem;font-family:monospace;opacity:0;font-weight:200}
 #death{position:absolute;top:42%;width:100%;text-align:center;font-size:1.5rem;font-weight:300;letter-spacing:.1em;opacity:0}
 #footer{position:absolute;bottom:3%;width:100%;text-align:center;font-size:.7rem;opacity:.4}
-#footer a{color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.3)}
+#footer a{color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.3);pointer-events:auto}
 @keyframes pulse{0%,100%{opacity:.3}50%{opacity:.7}}
 </style></head><body>
 <canvas id="c"></canvas>
@@ -29,6 +30,9 @@
 const c=document.getElementById('c'),gl=c.getContext('webgl2');
 const titleEl=document.getElementById('title'),subEl=document.getElementById('sub');
 const scoreEl=document.getElementById('score'),deathEl=document.getElementById('death'),footerEl=document.getElementById('footer');
+function unsupported(){subEl.textContent='drift needs WebGL2, which this browser does not offer';subEl.style.animation='none';
+  throw new Error('drift: WebGL2 unavailable');}
+if(!gl)unsupported();
 
 // --- Shaders ---
 const VS=`#version 300 es
@@ -36,7 +40,7 @@ in vec2 p;out vec2 vUv;void main(){vUv=p*.5+.5;gl_Position=vec4(p,0,1);}`;
 
 const FS=`#version 300 es
 precision highp float;in vec2 vUv;out vec4 O;
-uniform vec2 uR;uniform float uTime,uBirdY,uScroll,uFlash;uniform vec3 uP[8];
+uniform vec2 uR;uniform float uBirdY,uScroll,uFlash,uPulse;uniform vec3 uP[8];
 
 float sdSphere(vec3 p,float r){return length(p)-r;}
 float sdBox(vec3 p,vec3 b,float r){vec3 q=abs(p)-b+r;return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.)-r;}
@@ -63,12 +67,16 @@ void main(){
   // Camera behind orb, slightly above
   vec3 ro=vec3(0.,uBirdY*.4+2.5,uScroll-8.),rd=normalize(vec3(uv.x,uv.y-.18,1.));
   vec3 h=march(ro,rd);float fog=exp(-.04*h.x);
+  // Floor and ceiling at y=±5, the lethal bounds: a faint grid, brighter as the orb nears it
+  for(float s=-1.;s<2.;s+=2.){float tb=(s*5.-ro.y)/rd.y;if(tb>0.&&tb<h.x){vec3 bp=ro+rd*tb;
+    float near=1.+3.*smoothstep(2.5,4.7,s*uBirdY),line=smoothstep(.94,1.,fract(bp.z*.25));
+    col+=vec3(.12,.35,.2)*(.05+.35*line)*near*exp(-.07*tb);}}
   // Pillar glow + surface + orb light projection
   col+=vec3(.12,.35,.2)*.01/(h.z*h.z+.005)*fog;
   if(h.z<.001){vec3 hp=ro+rd*h.x;float dl=length(hp-vec3(0.,uBirdY,uScroll));
     col=vec3(.1,.3,.15)*fog+vec3(1.,.88,.65)*.8*exp(-dl*.3)*fog;}
-  // Orb glow + surface
-  col+=vec3(1.,.88,.65)*.02/(h.y*h.y+.01)*fog;
+  // Orb glow + surface, swelling on each gate cleared
+  col+=vec3(1.,.88,.65)*.02*(1.+2.*uPulse)/(h.y*h.y+.01)*fog;
   if(h.y<.001)col=vec3(1.,.9,.7);
   // Death flash
   col=mix(col,vec3(1.),uFlash*.6);
@@ -79,34 +87,36 @@ function compile(src,type){const s=gl.createShader(type);gl.shaderSource(s,src);
 const prog=gl.createProgram();
 gl.attachShader(prog,compile(VS,gl.VERTEX_SHADER));
 gl.attachShader(prog,compile(FS,gl.FRAGMENT_SHADER));
-gl.linkProgram(prog);gl.useProgram(prog);
+gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))unsupported();gl.useProgram(prog);
 const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
 gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
 const pLoc=gl.getAttribLocation(prog,'p');gl.enableVertexAttribArray(pLoc);
 gl.vertexAttribPointer(pLoc,2,gl.FLOAT,false,0,0);
-const uR=gl.getUniformLocation(prog,'uR'),uTime=gl.getUniformLocation(prog,'uTime');
+const uR=gl.getUniformLocation(prog,'uR'),uPulse=gl.getUniformLocation(prog,'uPulse');
 const uBirdY=gl.getUniformLocation(prog,'uBirdY'),uScroll=gl.getUniformLocation(prog,'uScroll');
 const uFlash=gl.getUniformLocation(prog,'uFlash'),uP=gl.getUniformLocation(prog,'uP');
 
-// --- Game state ---
-let state='ready',birdY=0,velY=0,scroll=0,score=0,elapsed=0,flash=0;
-let best=+localStorage.getItem('drift-best')||0;
-const P=Array.from({length:8},(_,i)=>[(i+2)*7,(Math.random()-.5)*3,2.6]);
+// --- Game state --- (score counts gates cleared; P entries are [z, gapY, gapSize, cleared])
+let state='ready',birdY=0,velY=0,scroll=0,score=0,elapsed=0,flash=0,pulse=0,deadAt=0,dirty=true;
+let best=0;try{best=+localStorage.getItem('drift-gates')||0;}catch{}
+const P=Array.from({length:8},(_,i)=>[(i+2)*7,(Math.random()-.5)*3,2.6,false]);
 
-function reset(){state='ready';birdY=0;velY=0;scroll=0;score=0;elapsed=0;flash=0;
-  P.forEach((p,i)=>{p[0]=(i+2)*7;p[1]=(Math.random()-.5)*3;p[2]=2.6;});}
+function reset(){state='ready';birdY=0;velY=0;scroll=0;score=0;elapsed=0;flash=0;pulse=0;dirty=true;
+  P.forEach((p,i)=>{p[0]=(i+2)*7;p[1]=(Math.random()-.5)*3;p[2]=2.6;p[3]=false;});}
 
-function die(){state='dead';flash=1;
-  if(score>best){best=score;localStorage.setItem('drift-best',best);}playDeath();}
+function die(){state='dead';flash=1;deadAt=performance.now();
+  if(score>best){best=score;try{localStorage.setItem('drift-gates',best);}catch{}}playDeath();}
 
-// --- Input ---
+// --- Input --- (a death ignores taps for 600ms: you are mashing when it happens)
 const tap=()=>{
   if(state==='ready'){state='playing';elapsed=0;velY=7;startAudio();}
   else if(state==='playing'){velY=7;playTap();}
-  else if(state==='dead'){reset();}};
-document.addEventListener('click',tap);
-document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();tap();}});
-document.addEventListener('touchstart',e=>{e.preventDefault();tap();},{passive:false});
+  else if(state==='dead'&&performance.now()-deadAt>600){reset();}};
+document.addEventListener('pointerdown',e=>{if(e.button>0||e.target.closest('a'))return;tap();});
+document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(!e.repeat)tap();}});
+// iOS can hand back a suspended context from a pointerdown; a pointerup is a full gesture
+document.addEventListener('pointerup',()=>{if(actx&&actx.state==='suspended'&&!document.hidden)actx.resume();});
+document.addEventListener('visibilitychange',()=>{if(actx)document.hidden?actx.suspend():actx.resume();});
 
 // --- Audio ---
 let actx,droneGain,tensionGain;
@@ -124,6 +134,12 @@ function playTap(){if(!actx)return;const t=actx.currentTime;
   g.gain.setValueAtTime(.15,t);g.gain.exponentialRampToValueAtTime(.001,t+.08);
   o.connect(f);f.connect(g);g.connect(actx.destination);o.start();o.stop(t+.08);}
 
+// A gate cleared: one note of a pentatonic scale climbing over three octaves, then round again
+function playGate(n){if(!actx)return;const t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();
+  o.frequency.value=330*2**(([0,2,4,7,9][n%5]+12*(Math.floor(n/5)%3))/12);
+  g.gain.setValueAtTime(.07,t);g.gain.exponentialRampToValueAtTime(.001,t+.3);
+  o.connect(g);g.connect(actx.destination);o.start();o.stop(t+.3);}
+
 function playDeath(){if(!actx)return;const t=actx.currentTime;
   droneGain.gain.setValueAtTime(0,t);
   const o=actx.createOscillator(),g=actx.createGain();
@@ -131,9 +147,10 @@ function playDeath(){if(!actx)return;const t=actx.currentTime;
   o.connect(g);g.connect(actx.destination);o.start();o.stop(t+.1);
   droneGain.gain.setValueAtTime(0,t+.2);droneGain.gain.linearRampToValueAtTime(.18,t+.5);}
 
-// --- Render loop ---
+// --- Render loop --- (the canvas is capped at ~2M pixels: sharp on a phone, affordable on a 5K screen)
 let prev=0;
-function resize(){c.width=innerWidth;c.height=innerHeight;gl.viewport(0,0,c.width,c.height);}
+function resize(){const s=Math.min(devicePixelRatio||1,Math.sqrt(2e6/(innerWidth*innerHeight)));
+  c.width=Math.round(innerWidth*s);c.height=Math.round(innerHeight*s);gl.viewport(0,0,c.width,c.height);dirty=true;}
 addEventListener('resize',resize);resize();
 
 (function frame(now){requestAnimationFrame(frame);
@@ -143,31 +160,35 @@ addEventListener('resize',resize);resize();
   if(state==='playing'){
     velY-=20*dt;birdY+=velY*dt;
     const speed=4.5*(1+elapsed*.004);scroll+=speed*dt;elapsed+=dt;
-    score=Math.floor(scroll);
-    // Collision — orb at Z=scroll, pillars at Z=p[0]
+    // Collision — orb at Z=scroll, pillars at Z=p[0]; a pillar passed is a gate cleared
     for(const p of P){const dz=Math.abs(p[0]-scroll);
-      if(dz<.7){if(Math.abs(birdY-p[1])+.3>p[2]*.5){die();break;}}}
-    if(birdY<-5||birdY>5)die();
+      if(dz<.7){if(Math.abs(birdY-p[1])+.3>p[2]*.5){die();break;}}
+      else if(!p[3]&&scroll>p[0]){p[3]=true;score++;pulse=1;playGate(score-1);}}
+    if(state==='playing'&&Math.abs(birdY)+.3>5)die();
     // Recycle pillars behind camera
     for(const p of P){if(p[0]<scroll-5){
       let mx=0;for(const q of P)if(q[0]>mx)mx=q[0];
-      p[0]=mx+7;p[1]=(Math.random()-.5)*3;p[2]=Math.max(1.8,2.6-elapsed*.012);}}
+      p[0]=mx+7;p[1]=(Math.random()-.5)*3;p[2]=Math.max(1.8,2.6-elapsed*.012);p[3]=false;}}
     // Tension audio
     if(actx)tensionGain.gain.value=Math.min(elapsed/90,1)*.08;
   }
-  flash*=.85;
+  flash*=.85;pulse*=.9;
+
+  // Nothing moves on the title or score screen once the flash has faded: draw nothing
+  if(state!=='playing'&&flash<.004&&pulse<.004&&!dirty)return;
+  dirty=false;
 
   // Uniforms
   const pFlat=new Float32Array(24);P.forEach((p,i)=>{pFlat[i*3]=p[0];pFlat[i*3+1]=p[1];pFlat[i*3+2]=p[2];});
-  gl.uniform2f(uR,c.width,c.height);gl.uniform1f(uTime,now*.001);
+  gl.uniform2f(uR,c.width,c.height);gl.uniform1f(uPulse,pulse);
   gl.uniform1f(uBirdY,birdY);gl.uniform1f(uScroll,scroll);gl.uniform1f(uFlash,flash);
   gl.uniform3fv(uP,pFlat);
   gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
 
   // UI
   scoreEl.textContent=score;scoreEl.style.opacity=state==='playing'?'.6':'0';
-  titleEl.style.opacity=state==='ready'?'1':'0';subEl.style.opacity=state==='ready'?'1':'0';
-  footerEl.style.opacity=state==='ready'?'.4':'0';
+  titleEl.style.opacity=state==='ready'?'1':'0';subEl.style.visibility=state==='ready'?'visible':'hidden'; // its pulse animation owns opacity
+  footerEl.style.opacity=state==='ready'?'.4':'0';footerEl.style.visibility=state==='ready'?'visible':'hidden';
   deathEl.textContent=score+' / best '+best;deathEl.style.opacity=state==='dead'?'1':'0';
 })(0);
 </script></body></html>
