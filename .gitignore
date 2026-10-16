@@ -5,3 +5,4 @@ docs/plans/
 docs/superpowers/
 .superpowers/
 .claude/agent-memory/
+.wrangler/

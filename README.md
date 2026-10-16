@@ -29,6 +29,10 @@ The entire game — HTML, CSS, JavaScript, GLSL — lives in one file.
 
 Put `drift.html` on any static host. No build step required.
 
+## License
+
+MIT, see [LICENSE](LICENSE).
+
 ---
 
 Made with care by [William](https://william.revah.paris)
