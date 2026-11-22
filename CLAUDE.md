@@ -44,7 +44,7 @@ cp drift.html ../william-revah-paris/public/drift.html
 
 Note the `public/` segment — the hub is an Astro site and only `public/` is served. `./sync.sh` does exactly this and refuses to run if the destination directory is missing, so it cannot silently copy into a stray path. **`sync.sh` is tracked — do not gitignore it.** An untracked sync script means a fresh clone gets neither the correct path nor the guard, and the two copies drift apart.
 
-Then commit in both repos. This sync is mandatory — never commit a `drift.html` change here without also updating the portfolio copy.
+Then commit in both repos. This sync is mandatory — never commit a `drift.html` change here without also updating the portfolio copy. The hub prints this file line by line as the Drift page's listing and the room's minimap, so every edit changes them.
 
 ## Project-Specific Rules
 
