@@ -109,19 +109,19 @@ function die(){state='dead';flash=1;deadAt=performance.now();
   if(score>best){best=score;try{localStorage.setItem('drift-gates',best);}catch{}}playDeath();tell('die');}
 
 // --- Input --- (a death ignores taps for 600ms: you are mashing when it happens)
-const tap=()=>{lastIn=performance.now();if(actx&&state==='playing')actx.resume();
+const tap=()=>{lastIn=performance.now();if(actx&&state==='playing')actx.resume().catch(()=>{});
   if(state==='ready'){state='playing';elapsed=0;velY=7;startAudio();tell('start');}
   else if(state==='playing'){velY=7;playTap();tell('tap');}
   else if(state==='dead'&&performance.now()-deadAt>600){reset();tell('reset');}};
 document.addEventListener('pointerdown',e=>{if(e.button>0||e.target.closest('a'))return;tap();});
 document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(!e.repeat)tap();}});
 // iOS can hand back a suspended context from a pointerdown; a pointerup is a full gesture
-document.addEventListener('pointerup',()=>{if(actx&&actx.state==='suspended'&&!document.hidden&&state==='playing')actx.resume();});
-document.addEventListener('visibilitychange',()=>{if(actx)document.hidden||state!=='playing'?actx.suspend():actx.resume();});
+document.addEventListener('pointerup',()=>{if(actx&&actx.state==='suspended'&&!document.hidden&&state==='playing')actx.resume().catch(()=>{});});
+document.addEventListener('visibilitychange',()=>{if(actx)document.hidden||state!=='playing'?actx.suspend():(lastIn=performance.now(),actx.resume().catch(()=>{}));});
 
 // --- Audio ---
 let actx,droneGain,tensionGain,lastIn=0;setInterval(()=>{if(actx&&actx.state==='running'&&(document.hidden||performance.now()-lastIn>3e3))actx.suspend();},500);
-function startAudio(){if(actx){actx.resume();const t=actx.currentTime;droneGain.gain.cancelScheduledValues(t);droneGain.gain.setValueAtTime(0,t);droneGain.gain.linearRampToValueAtTime(.18,t+.3);return;}actx=new AudioContext();
+function startAudio(){if(actx){actx.resume().catch(()=>{});const t=actx.currentTime;droneGain.gain.cancelScheduledValues(t);droneGain.gain.setValueAtTime(0,t);droneGain.gain.linearRampToValueAtTime(.18,t+.3);return;}actx=new AudioContext();
   droneGain=actx.createGain();droneGain.gain.value=.18;droneGain.connect(actx.destination);
   const d1=actx.createOscillator();d1.frequency.value=55;d1.connect(droneGain);d1.start();
   const d2=actx.createOscillator();d2.frequency.value=55.5;d2.connect(droneGain);d2.start();

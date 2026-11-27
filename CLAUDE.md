@@ -30,7 +30,7 @@ Manual playtesting. Open the file, play the game. Key things to verify:
 - Orb responds to tap with correct impulse
 - Collision detection matches visual pillar positions
 - Difficulty ramp is imperceptible until ~90s
-- Audio starts on first interaction (browser policy), and is suspended within 3 s of the last input and whenever the page is hidden; the next input wakes it
+- Audio starts on first interaction (browser policy), and is suspended about three seconds after the last input and whenever the page is hidden; the next input wakes it
 - Framed in a page of its own origin, the game posts `{type, score, best}` for each event; standalone it posts nothing
 - Score persists across page reloads (localStorage)
 - No WebGL errors in browser console
