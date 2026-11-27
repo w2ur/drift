@@ -30,7 +30,7 @@ Manual playtesting. Open the file, play the game. Key things to verify:
 - Orb responds to tap with correct impulse
 - Collision detection matches visual pillar positions
 - Difficulty ramp is imperceptible until ~90s
-- Audio starts on first interaction (browser policy), and is suspended 3 s after the last input and whenever the page is hidden; the next input wakes it
+- Audio starts on first interaction (browser policy), and is suspended within 3 s of the last input and whenever the page is hidden; the next input wakes it
 - Framed in a page of its own origin, the game posts `{type, score, best}` for each event; standalone it posts nothing
 - Score persists across page reloads (localStorage)
 - No WebGL errors in browser console
@@ -52,6 +52,6 @@ Then commit in both repos. This sync is mandatory — never commit a `drift.html
 - Everything must stay in one file — do not split into multiple files
 - No external dependencies — no npm, no CDN, no libraries
 - Target: under 200 lines total (`wc -l drift.html` to check the current count)
-- **Never add or remove a line to add a feature**: append to an existing line. The hub reads the file by line number (its listing, minimap and the `postMessage` lines it lights), so a line that moves breaks the page that prints it
+- Append a feature to an existing line rather than adding a line: the hub prints this file line by line (its listing, its minimap and the Drift room's flight follow the file's lines), so a change of line count reshapes them
 - The game posts to its parent only when framed, with `targetOrigin = location.origin` and a `type` from the fixed list in `tell()`; never `'*'`
 - Footer "Made with care by William" on start screen
