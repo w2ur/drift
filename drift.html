@@ -120,7 +120,7 @@ document.addEventListener('pointerup',()=>{if(actx&&actx.state==='suspended'&&!d
 document.addEventListener('visibilitychange',()=>{if(actx)document.hidden||state!=='playing'?actx.suspend():actx.resume();});
 
 // --- Audio ---
-let actx,droneGain,tensionGain,lastIn=0;setInterval(()=>{if(actx&&actx.state==='running'&&(document.hidden||performance.now()-lastIn>(state==='playing'?3e3:1500)))actx.suspend();},500);
+let actx,droneGain,tensionGain,lastIn=0;setInterval(()=>{if(actx&&actx.state==='running'&&(document.hidden||performance.now()-lastIn>3e3))actx.suspend();},500);
 function startAudio(){if(actx){actx.resume();const t=actx.currentTime;droneGain.gain.cancelScheduledValues(t);droneGain.gain.setValueAtTime(0,t);droneGain.gain.linearRampToValueAtTime(.18,t+.3);return;}actx=new AudioContext();
   droneGain=actx.createGain();droneGain.gain.value=.18;droneGain.connect(actx.destination);
   const d1=actx.createOscillator();d1.frequency.value=55;d1.connect(droneGain);d1.start();
