@@ -98,7 +98,7 @@ const uBirdY=gl.getUniformLocation(prog,'uBirdY'),uScroll=gl.getUniformLocation(
 const uFlash=gl.getUniformLocation(prog,'uFlash'),uP=gl.getUniformLocation(prog,'uP');
 
 // --- Game state --- (score counts gates cleared; P entries are [z, gapY, gapSize, cleared])
-let state='ready',birdY=0,velY=0,scroll=0,score=0,elapsed=0,flash=0,pulse=0,deadAt=0,dirty=true;
+let state='ready',birdY=0,velY=0,scroll=0,score=0,elapsed=0,flash=0,pulse=0,deadAt=0,dirty=true;const tell=(type,ok=['die','start','tap','reset','hit','gate','bound','recycle'])=>{try{if(window.parent!==window&&ok.includes(type))parent.postMessage({type,score,best},location.origin)}catch{}};
 let best=0;try{best=+localStorage.getItem('drift-gates')||0;}catch{}
 const P=Array.from({length:8},(_,i)=>[(i+2)*7,(Math.random()-.5)*3,2.6,false]);
 
@@ -106,22 +106,22 @@ function reset(){state='ready';birdY=0;velY=0;scroll=0;score=0;elapsed=0;flash=0
   P.forEach((p,i)=>{p[0]=(i+2)*7;p[1]=(Math.random()-.5)*3;p[2]=2.6;p[3]=false;});}
 
 function die(){state='dead';flash=1;deadAt=performance.now();
-  if(score>best){best=score;try{localStorage.setItem('drift-gates',best);}catch{}}playDeath();}
+  if(score>best){best=score;try{localStorage.setItem('drift-gates',best);}catch{}}playDeath();tell('die');}
 
 // --- Input --- (a death ignores taps for 600ms: you are mashing when it happens)
-const tap=()=>{
-  if(state==='ready'){state='playing';elapsed=0;velY=7;startAudio();}
-  else if(state==='playing'){velY=7;playTap();}
-  else if(state==='dead'&&performance.now()-deadAt>600){reset();}};
+const tap=()=>{lastIn=performance.now();if(actx&&state==='playing')actx.resume();
+  if(state==='ready'){state='playing';elapsed=0;velY=7;startAudio();tell('start');}
+  else if(state==='playing'){velY=7;playTap();tell('tap');}
+  else if(state==='dead'&&performance.now()-deadAt>600){reset();tell('reset');}};
 document.addEventListener('pointerdown',e=>{if(e.button>0||e.target.closest('a'))return;tap();});
 document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(!e.repeat)tap();}});
 // iOS can hand back a suspended context from a pointerdown; a pointerup is a full gesture
-document.addEventListener('pointerup',()=>{if(actx&&actx.state==='suspended'&&!document.hidden)actx.resume();});
-document.addEventListener('visibilitychange',()=>{if(actx)document.hidden?actx.suspend():actx.resume();});
+document.addEventListener('pointerup',()=>{if(actx&&actx.state==='suspended'&&!document.hidden&&state==='playing')actx.resume();});
+document.addEventListener('visibilitychange',()=>{if(actx)document.hidden||state!=='playing'?actx.suspend():actx.resume();});
 
 // --- Audio ---
-let actx,droneGain,tensionGain;
-function startAudio(){if(actx)return;actx=new AudioContext();
+let actx,droneGain,tensionGain,lastIn=0;setInterval(()=>{if(actx&&actx.state==='running'&&(document.hidden||performance.now()-lastIn>(state==='playing'?3e3:1500)))actx.suspend();},500);
+function startAudio(){if(actx){actx.resume();const t=actx.currentTime;droneGain.gain.cancelScheduledValues(t);droneGain.gain.setValueAtTime(0,t);droneGain.gain.linearRampToValueAtTime(.18,t+.3);return;}actx=new AudioContext();
   droneGain=actx.createGain();droneGain.gain.value=.18;droneGain.connect(actx.destination);
   const d1=actx.createOscillator();d1.frequency.value=55;d1.connect(droneGain);d1.start();
   const d2=actx.createOscillator();d2.frequency.value=55.5;d2.connect(droneGain);d2.start();
@@ -146,7 +146,7 @@ function playDeath(){if(!actx)return;const t=actx.currentTime;
   const o=actx.createOscillator(),g=actx.createGain();
   o.frequency.value=40;g.gain.setValueAtTime(.3,t);g.gain.exponentialRampToValueAtTime(.001,t+.1);
   o.connect(g);g.connect(actx.destination);o.start();o.stop(t+.1);
-  droneGain.gain.setValueAtTime(0,t+.2);droneGain.gain.linearRampToValueAtTime(.18,t+.5);}
+  tensionGain.gain.setValueAtTime(0,t);}
 
 // --- Render loop --- (the canvas is capped at ~2M pixels: sharp on a phone, affordable on a 5K screen)
 let prev=0;
@@ -163,15 +163,15 @@ addEventListener('resize',resize);resize();
     const speed=4.5*(1+elapsed*.004);scroll+=speed*dt;elapsed+=dt;
     // Collision — orb at Z=scroll, pillars at Z=p[0]; a pillar passed is a gate cleared
     for(const p of P){const dz=Math.abs(p[0]-scroll);
-      if(dz<.7){if(Math.abs(birdY-p[1])+.3>p[2]*.5){die();break;}}
-      else if(!p[3]&&scroll>p[0]){p[3]=true;score++;pulse=1;playGate(score-1);}}
-    if(state==='playing'&&Math.abs(birdY)+.3>5)die();
+      if(dz<.7){if(Math.abs(birdY-p[1])+.3>p[2]*.5){tell('hit');die();break;}}
+      else if(!p[3]&&scroll>p[0]){p[3]=true;score++;pulse=1;playGate(score-1);tell('gate');}}
+    if(state==='playing'&&Math.abs(birdY)+.3>5){tell('bound');die();}
     // Recycle pillars behind camera
-    for(const p of P){if(p[0]<scroll-5){
+    for(const p of P){if(p[0]<scroll-5){tell('recycle');
       let mx=0;for(const q of P)if(q[0]>mx)mx=q[0];
       p[0]=mx+7;p[1]=(Math.random()-.5)*3;p[2]=Math.max(1.8,2.6-elapsed*.012);p[3]=false;}}
     // Tension audio
-    if(actx)tensionGain.gain.value=Math.min(elapsed/90,1)*.08;
+    if(actx&&state==='playing')tensionGain.gain.value=Math.min(elapsed/90,1)*.08;
   }
   flash*=.85;pulse*=.9;
 

@@ -27,7 +27,8 @@ The whole story: [Drift, on william.revah.paris](https://william.revah.paris/en/
 
 - **Rendering:** one fullscreen fragment shader that raymarches signed distance functions (SDFs).
 - **3D:** camera, orb and pillars are defined mathematically: no meshes, no models, no 3D library.
-- **Audio:** synthesised with the Web Audio API: an ambient drone, a tap sound, a note for each gate cleared, a death sound.
+- **Audio:** synthesised with the Web Audio API: an ambient drone, a tap sound, a note for each gate cleared, a death sound. It goes quiet three seconds after the last input, and whenever the page is hidden.
+- **Events:** when the game is shown in a frame, it tells the page around it what happens (`start`, `tap`, `gate`, `hit`, `bound`, `die`, `reset`, `recycle`), to the page's own origin only. Played alone, it says nothing.
 - **Score:** gates cleared; the best score is kept in `localStorage`.
 
 HTML, CSS, JavaScript and GLSL all live in `drift.html`. It needs a browser with WebGL2, and says so when there is none.
